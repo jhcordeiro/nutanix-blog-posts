@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <title>Inference Engineering Is Infrastructure Engineering</title>
+  <style>
+    :root{
+      --bg:#fafafa;--paper:#ffffff;--ink:#172033;--text:#334155;--muted:#64748b;
+      --line:#d8dee8;--soft:#f1f5f9;--indigo:#4f46e5;--indigo-soft:#eef2ff;
+      --green:#047857;--green-soft:#ecfdf5;--amber:#b45309;--amber-soft:#fffbeb;
+      --code:#111827;--code-text:#e5e7eb;--shadow:0 8px 28px rgba(15,23,42,.06)
+    }
+    @media(prefers-color-scheme:dark){:root{
+      --bg:#0b1020;--paper:#121a2b;--ink:#f8fafc;--text:#dbe3ef;--muted:#a8b5c8;
+      --line:#334155;--soft:#1e293b;--indigo:#818cf8;--indigo-soft:#25294a;
+      --green:#34d399;--green-soft:#0f352d;--amber:#fbbf24;--amber-soft:#3a2b12;
+      --code:#060b16;--code-text:#edf2f7;--shadow:0 10px 34px rgba(0,0,0,.22)
+    }}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;scroll-padding-top:24px}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:17px;line-height:1.72}
+    a{color:var(--indigo);text-underline-offset:3px}
+    .progress{position:fixed;z-index:20;inset:0 auto auto 0;height:3px;width:0;background:var(--indigo)}
+    .shell{width:min(100% - 40px,780px);margin-inline:auto}
+    header{padding:68px 0 36px;border-bottom:1px solid var(--line)}
+    .series{margin:0 0 14px;color:var(--indigo);font-size:.79rem;font-weight:780;letter-spacing:.09em;text-transform:uppercase}
+    h1{margin:0;color:var(--ink);font-size:clamp(2.45rem,7vw,4.85rem);line-height:.98;letter-spacing:-.055em;font-weight:780}
+    .dek{margin:24px 0 22px;max-width:720px;color:var(--text);font-size:clamp(1.08rem,2.2vw,1.35rem);line-height:1.5}
+    .meta{display:flex;flex-wrap:wrap;gap:7px 18px;color:var(--muted);font-size:.88rem}.meta span+span{position:relative}.meta span+span:before{content:"·";position:absolute;left:-11px}
+    .attribution{margin:25px 0 0;padding-top:18px;border-top:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+    .toc{margin:34px auto 16px;padding:23px 25px;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow)}
+    .toc h2{margin:0 0 13px;color:var(--ink);font-size:.92rem;letter-spacing:.04em}.toc ol{columns:2;column-gap:36px;margin:0;padding-left:22px}.toc li{break-inside:avoid;padding:3px 0}.toc a{color:var(--text);text-decoration:none;font-size:.93rem}.toc a:hover{text-decoration:underline;color:var(--indigo)}
+    main{padding:18px 0 62px}
+    section{padding:42px 0;border-bottom:1px solid var(--line)}
+    section:last-child{border-bottom:0}
+    h2{margin:0 0 20px;color:var(--ink);font-size:clamp(1.65rem,4vw,2.25rem);line-height:1.15;letter-spacing:-.025em}
+    h3{margin:28px 0 8px;color:var(--ink);font-size:1.13rem;line-height:1.3}
+    p{margin:0 0 18px}p:last-child{margin-bottom:0}
+    strong{color:var(--ink)}
+    .lede{font-size:1.12rem;color:var(--ink)}
+    .pull{margin:30px 0;padding:21px 0 21px 25px;border-left:4px solid var(--indigo);color:var(--ink);font-size:clamp(1.18rem,3vw,1.48rem);font-weight:700;line-height:1.45;letter-spacing:-.012em}
+    .phase-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:25px 0}.phase{padding:20px;background:var(--paper);border:1px solid var(--line)}.phase b{display:block;margin-bottom:4px;color:var(--indigo);font-size:.8rem;letter-spacing:.08em}.phase p{font-size:.94rem;margin:0}.phase.decode b{color:var(--green)}
+    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.metric{background:var(--paper);padding:16px}.metric dt{color:var(--ink);font-weight:800}.metric dd{margin:3px 0 0;color:var(--muted);font-size:.86rem;line-height:1.45}
+    .pipeline{margin:28px 0;padding:18px;background:var(--paper);border:1px solid var(--line);overflow:hidden}.pipeline svg{display:block;width:100%;height:auto}.pipeline text{font-family:ui-sans-serif,system-ui,sans-serif}.s-box{fill:var(--soft);stroke:var(--line);stroke-width:1.5}.s-main{fill:var(--indigo-soft);stroke:var(--indigo);stroke-width:1.7}.s-good{fill:var(--green-soft);stroke:var(--green);stroke-width:1.7}.s-title{fill:var(--ink);font-size:15px;font-weight:750}.s-small{fill:var(--muted);font-size:12px}.s-line{fill:none;stroke:var(--indigo);stroke-width:2}
+    .math{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}.math article{padding:20px 21px;background:var(--code);color:var(--code-text)}.math b{display:block;color:#a5b4fc;font-size:.78rem;letter-spacing:.07em;margin-bottom:7px}.math strong{display:block;color:#fff;font:700 1.45rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}.math span{display:block;margin-top:8px;color:#aab5c6;font-size:.82rem;line-height:1.45}
+    .formulae{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}.formula-card{padding:18px 19px;background:var(--code);color:var(--code-text)}.formula-card b{display:block;margin-bottom:7px;color:#a5b4fc;font-size:.76rem;letter-spacing:.07em}.formula{color:#fff;font:700 .96rem/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.formula-card p{margin:8px 0 0;color:#aab5c6;font-size:.82rem;line-height:1.45}.moe-rule{margin:24px 0;padding:22px;background:var(--amber-soft);border:1px solid var(--amber);color:var(--ink)}.moe-rule strong{display:block;margin-bottom:4px;color:var(--amber);font-size:.78rem;letter-spacing:.06em}.moe-rule p{margin:0;font-size:1.04rem}.model-table-wrap{margin:25px 0;border:1px solid var(--line);background:var(--paper)}.model-table{width:100%;border-collapse:collapse;font-size:.86rem;line-height:1.45}.model-table th{padding:12px 11px;background:var(--soft);color:var(--ink);text-align:left;font-size:.74rem;letter-spacing:.035em;vertical-align:bottom}.model-table td{padding:13px 11px;border-top:1px solid var(--line);vertical-align:top}.model-table td:first-child{color:var(--ink);font-weight:780}.model-table small{display:block;margin-top:3px;color:var(--muted);font-size:.76rem;line-height:1.4}.infra-ladder{margin:30px 0;padding:16px;background:var(--paper);border:1px solid var(--line)}.infra-ladder svg{display:block;width:100%;height:auto}.bar-weight{fill:var(--indigo)}.bar-headroom{fill:var(--amber)}.bar-line{stroke:var(--paper);stroke-width:1;opacity:.8}.ladder-axis{stroke:var(--line);stroke-width:2}.ladder-label{fill:var(--ink);font:750 18px ui-sans-serif,system-ui,sans-serif}.ladder-small{fill:var(--muted);font:14px ui-sans-serif,system-ui,sans-serif}.ladder-count{fill:var(--ink);font:800 17px ui-monospace,SFMono-Regular,Menlo,monospace}.source-note{margin:18px 0 0;color:var(--muted);font-size:.79rem;line-height:1.55}.source-note a{white-space:normal}.playbook{display:grid;gap:0;margin-top:20px}.move{display:grid;grid-template-columns:172px 1fr;gap:24px;padding:14px 0;border-top:1px solid var(--line)}.move:first-child{border-top:0}.move h3{margin:2px 0;color:var(--indigo);font-size:.9rem;letter-spacing:.035em}.move p{margin:0;font-size:.94rem}
+    .budget{margin:24px 0;padding:20px;background:var(--paper);border:1px solid var(--line);font:700 clamp(.82rem,2.2vw,1.02rem)/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);text-align:center}.budget span{color:var(--indigo)}
+    .layer-chain{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.layer-chain div{position:relative;padding:14px 10px;background:var(--paper);text-align:center}.layer-chain b{display:block;color:var(--ink);font-size:.84rem}.layer-chain span{display:block;margin-top:3px;color:var(--muted);font-size:.72rem;line-height:1.35}.layer-chain div+div:before{content:"→";position:absolute;left:-8px;top:50%;transform:translateY(-50%);z-index:2;width:15px;height:22px;background:var(--line);color:var(--ink);font-weight:800;line-height:22px}
+    .stack{margin:24px 0;border:1px solid var(--line);background:var(--paper)}.stack-row{display:grid;grid-template-columns:170px 1fr;gap:24px;padding:16px 19px;border-top:1px solid var(--line)}.stack-row:first-child{border-top:0}.stack-row b{color:var(--ink)}.stack-row p{margin:0;font-size:.93rem}
+    .subhead{margin-top:36px}.compact-note{margin:22px 0;padding:18px 20px;background:var(--soft);border-top:2px solid var(--indigo);font-size:.94rem}.compact-note p{margin:0}
+    .file-tree{margin:24px 0;padding:20px;background:var(--code);color:var(--code-text);font:13px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}.file-tree .root{color:#a5b4fc;font-weight:800}.file-tree .note{color:#94a3b8}
+    .rules{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}.rule{padding:21px;background:var(--paper);border:1px solid var(--line)}.rule h3{margin:0 0 5px;font-size:1.1rem}.rule .mode{display:block;margin-bottom:12px;color:var(--indigo);font:700 .76rem ui-monospace,SFMono-Regular,Menlo,monospace}.rule p{margin:0;font-size:.92rem}.placement{padding:14px 18px;background:var(--ink);color:var(--bg);text-align:center;font-weight:780;line-height:1.5}
+    .thesis-chain{margin:25px 0;padding:20px;background:var(--ink);color:var(--bg);font:750 clamp(.86rem,2vw,1rem)/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}.thesis-chain span{color:#a5b4fc}.thesis-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.thesis-grid article{padding:18px;background:var(--paper)}.thesis-grid b{display:block;color:var(--indigo);font-size:1.2rem}.thesis-grid p{margin:4px 0 0;color:var(--muted);font-size:.86rem;line-height:1.45}
+    .question{margin:28px 0 0;padding:23px;background:var(--indigo-soft);color:var(--ink);font-size:1.08rem}.question b{display:block;color:var(--indigo);font-size:.8rem;letter-spacing:.06em;margin-bottom:6px}
+    .reading-paths{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.reading-paths article{padding:18px;background:var(--paper)}.reading-paths b{display:block;color:var(--ink);font-size:.95rem}.reading-paths span{display:block;margin:3px 0 8px;color:var(--indigo);font:700 .76rem ui-monospace,SFMono-Regular,Menlo,monospace}.reading-paths p{margin:0;color:var(--muted);font-size:.84rem;line-height:1.5}
+    .numbered{counter-reset:item;margin:22px 0;padding:0;list-style:none}.numbered li{counter-increment:item;display:grid;grid-template-columns:34px 1fr;gap:13px;padding:14px 0;border-top:1px solid var(--line)}.numbered li:before{content:counter(item);display:grid;place-items:center;width:30px;height:30px;background:var(--ink);color:var(--bg);font:800 .78rem ui-monospace,SFMono-Regular,Menlo,monospace}.numbered li:first-child{border-top:0}.numbered b{color:var(--ink)}
+    .decision-table{width:100%;border-collapse:collapse;margin:24px 0;background:var(--paper);border:1px solid var(--line);font-size:.9rem;line-height:1.5}.decision-table th{padding:12px 14px;background:var(--soft);color:var(--ink);text-align:left;font-size:.76rem;letter-spacing:.035em}.decision-table td{padding:13px 14px;border-top:1px solid var(--line);vertical-align:top}.decision-table td:first-child{color:var(--ink);font-weight:780;width:24%}
+    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;margin:0}.glossary div{padding:13px 0;border-top:1px solid var(--line)}.glossary dt{color:var(--ink);font-weight:780}.glossary dd{margin:2px 0 0;color:var(--muted);font-size:.88rem;line-height:1.5}
+    footer{padding:30px 0 46px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}.guides{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin:18px 0 21px}.guide{color:var(--text)}.guide b{color:var(--indigo)}.slug{display:block;font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+    @media(max-width:660px){body{font-size:16px}.meta{gap:7px 13px}.meta span+span:before{display:none}.shell{width:min(100% - 24px,780px)}header{padding-top:44px}.toc{padding:20px}.toc ol{columns:1}.phase-grid,.math,.formulae,.rules,.glossary,.guides,.thesis-grid,.layer-chain,.reading-paths{grid-template-columns:1fr}.layer-chain div{text-align:left;padding:12px 14px}.layer-chain div+div:before{content:"↓";left:50%;top:-11px;transform:translateX(-50%);width:22px;text-align:center}.metric-row{grid-template-columns:1fr}.move,.stack-row{grid-template-columns:1fr;gap:5px}.move h3{margin-top:0}.pipeline,.infra-ladder{margin-inline:-3px;padding:8px}.pipeline .s-title{font-size:19px}.pipeline .s-small{font-size:15px}.model-table-wrap{border:0;background:transparent}.model-table,.model-table tbody,.model-table tr,.model-table td{display:block;width:100%}.model-table thead{display:none}.model-table tr{margin:0 0 12px;border:1px solid var(--line);background:var(--paper)}.model-table td{display:grid;grid-template-columns:105px 1fr;gap:12px;padding:9px 12px;border-top:1px solid var(--line)}.model-table td:first-child{padding-top:13px;border-top:0;font-size:1.02rem}.model-table td:first-child:before{display:none}.model-table td:before{content:attr(data-label);color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.03em}.decision-table,.decision-table tbody,.decision-table tr,.decision-table td{display:block;width:100%}.decision-table{border:0;background:transparent}.decision-table thead{display:none}.decision-table tr{margin:0 0 12px;border:1px solid var(--line);background:var(--paper)}.decision-table td{display:grid;grid-template-columns:104px 1fr;gap:12px;width:auto;padding:10px 12px;border-top:1px solid var(--line)}.decision-table td:first-child{width:auto;border-top:0;font-size:1rem}.decision-table td:first-child:before{display:none}.decision-table td:before{content:attr(data-label);color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.03em}.infra-ladder .ladder-label{font-size:22px}.infra-ladder .ladder-small{font-size:17px}.infra-ladder .ladder-count{font-size:19px}.thesis-chain{text-align:left}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.progress{display:none}}
+    @media print{.progress{display:none}:root{--bg:#fff;--paper:#fff;--ink:#111827;--text:#334155;--muted:#475569;--line:#cbd5e1;--soft:#f8fafc;--indigo:#4338ca;--indigo-soft:#eef2ff;--shadow:none}.toc{box-shadow:none}.shell{width:100%;max-width:none}header{padding-top:24px}section{break-inside:auto}.pull,.phase,.math article,.rule,.pipeline{break-inside:avoid}}
+  </style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+<header>
+  <div class="shell">
+    <p class="series">Inference engineering · team reference</p>
+    <h1>Inference is an infrastructure problem</h1>
+    <p class="dek">How an inference request moves from application to accelerator, why prefill and decode stress different hardware, what current open-weight models demand from GPU memory, and how the Nutanix stack—Project Astra, COCI, AHV, NKP, Nutanix Enterprise AI, Files, Objects, and Flow—turns GPU servers into a governed inference service.</p>
+    <div class="meta"><span>Nutanix team</span><span>September 2026</span><span>≈ 60–75 min reference</span></div>
+    <p class="attribution">Original post created for internal team education. Inference concepts from <cite>Inference Engineering</cite> by Philip Kiely (Baseten Books, 2026).</p>
+  </div>
+</header>
+<nav class="toc shell" aria-label="Table of contents">
+  <h2>In this reference</h2>
+  <ol>
+    <li><a href="#why">How to use this guide</a></li>
+    <li><a href="#toy">Start small: GPT-2 on a laptop</a></li>
+    <li><a href="#not-training">How an inference request behaves</a></li>
+    <li><a href="#latency">A worked latency budget</a></li>
+    <li><a href="#transformer">The hardware mental model</a></li>
+    <li><a href="#gpus">GPU memory and bandwidth</a></li>
+    <li><a href="#hardware">Do the math: model footprints</a></li>
+    <li><a href="#kv">KV cache and concurrency</a></li>
+    <li><a href="#parallelism">Parallelism and fabric choices</a></li>
+    <li><a href="#speed">A short runtime pointer</a></li>
+    <li><a href="#production">The infrastructure bill of materials</a></li>
+    <li><a href="#nutanix">The inference stack on Nutanix</a></li>
+    <li><a href="#gpu-farm">Field notes: our own GPU Farm</a></li>
+    <li><a href="#operations">Scaling, ownership, and failure modes</a></li>
+    <li><a href="#artifacts">Artifact lifecycle</a></li>
+    <li><a href="#files-objects">Files vs Objects</a></li>
+    <li><a href="#capacity">Capacity-planning checklist</a></li>
+    <li><a href="#together">Putting it together</a></li>
+    <li><a href="#thesis">The infrastructure thesis</a></li>
+    <li><a href="#next">Discussion questions</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</nav>
+<main class="shell">
+  <section id="why">
+    <h2>How to use this guide</h2>
+    <p class="lede">This is the team’s systems-level map of inference: the path from an incoming request to generated tokens, and the infrastructure required to make that path predictable.</p>
+    <p>Read it straight through for the overall architecture, or use it as a field reference during sizing, design review, and incident response. The center of gravity is infrastructure: HBM capacity, GPU topology, east-west fabric, storage throughput, failure domains, power, scheduling, and the Nutanix operating model. Runtime techniques appear only where they materially change that bill.</p>
+    <p>The story runs in one direction. It starts with a 124M-parameter GPT-2 running on a laptop, where every inference concept is visible in about 130 lines of Python. It then scales the same concepts to trillion-parameter models, where each line of that script turns into a hardware, storage, or network decision. It ends in the Nutanix AI Factory: <strong>Project Astra</strong> turns bare GPU servers into managed capacity, <strong>COCI</strong> clusters and <strong>AHV</strong> operate the GPU nodes, <strong>NKP</strong> runs Kubernetes on them, <strong>Nutanix Enterprise AI (NAI)</strong> serves the models, and <strong>Nutanix Files</strong> and <strong>Objects</strong> hold the bytes.</p>
+    <div class="reading-paths">
+      <article><b>Understand the system</b><span>REQUEST → HARDWARE</span><p>Start with request phases, the latency budget, roofline, KV cache, and model-footprint math.</p></article>
+      <article><b>Design the platform</b><span>TOPOLOGY → NUTANIX</span><p>Jump to parallelism, the bill of materials, Nutanix responsibilities, storage tiers, and autoscaling.</p></article>
+      <article><b>Review a deployment</b><span>CHECKLIST → FAILURE MODES</span><p>Use the capacity checklist, artifact lifecycle, ownership matrix, and operational failure table.</p></article>
+    </div>
+    <p>The arithmetic is intentionally explicit. Every worked number is approximate and tied to stated assumptions; production decisions still require benchmark data from the exact model, precision, serving framework, GPU, context distribution, and concurrency target.</p>
+  </section>
+
+  <section id="toy">
+    <h2>Start small: GPT-2 on a laptop</h2>
+    <p class="lede">Every large-scale inference problem already exists in a 124M-parameter model. It is just too small to hurt.</p>
+    <p>The companion script <a href="../code/gpt2-inference.py"><code>gpt2-inference.py</code></a> runs GPT-2 with no serving framework: a hand-written BPE tokenizer, an explicit transformer forward pass, top-p sampling, and a generation loop. Read it with this map in mind, because each step reappears later as infrastructure.</p>
+    <table class="decision-table" aria-label="Mapping the toy script to production infrastructure">
+      <thead><tr><th>Script step</th><th>What it does on a laptop</th><th>What it becomes at scale</th></tr></thead>
+      <tbody>
+        <tr><td><code>download()</code></td><td data-label="On a laptop">Fetches ≈550 MB of FP32 weights plus kilobytes of config and tokenizer files into <code>gpt2-cache/</code>.</td><td data-label="At scale">Importing a model into NAI: Objects or Hugging Face → a Files RWX volume. Hundreds of GB to ≈1 TB per model, and each new replica reads it again.</td></tr>
+        <tr><td><code>Tokenizer.encode</code></td><td data-label="On a laptop">Turns UTF-8 text into token IDs using the model's own vocab and merges files.</td><td data-label="At scale">Request ingress. The tokenizer files are version-locked to the weights; a mismatch silently corrupts output.</td></tr>
+        <tr><td>First <code>forward(ids)</code></td><td data-label="On a laptop">Processes the whole prompt at once: <strong>prefill</strong>.</td><td data-label="At scale">Compute-bound. Sets time to first token (TTFT). Scales with prompt length.</td></tr>
+        <tr><td><code>generate()</code> loop</td><td data-label="On a laptop">One token per iteration, appended and fed back: <strong>decode</strong>.</td><td data-label="At scale">Memory-bandwidth-bound. Sets tokens per second. Each step streams the weights through the GPU once.</td></tr>
+        <tr><td><code>sample_top_p</code></td><td data-label="On a laptop">Temperature and nucleus sampling over 50,257 logits.</td><td data-label="At scale">Cheap, but it runs on every step of the serial loop, so it sits on the latency path.</td></tr>
+        <tr><td><code>print(..., flush=True)</code></td><td data-label="On a laptop">Streams each token to the terminal.</td><td data-label="At scale">Egress through the NAI Agent Gateway (Envoy) as an OpenAI-compatible stream.</td></tr>
+      </tbody>
+    </table>
+    <p>The script deliberately omits the single most important production optimization: <strong>it has no KV cache</strong>. Every decode step re-runs attention over the entire sequence, so the work per step grows with length. A production engine such as vLLM stores each layer's keys and values once and processes only the newest token. That trade saves recomputation and spends GPU memory instead, and the rest of this guide is largely about paying that memory bill.</p>
+    <div class="math">
+      <article><b>GPT-2 124M · FP32</b><strong>≈550 MB weights</strong><span>12 layers · 12 heads · 768 hidden · 1,024-token context. Fits in laptop RAM with room to spare.</span></article>
+      <article><b>GPT-2 KV CACHE · FP32</b><strong>≈72 KB / token</strong><span>2 × 12 layers × 12 heads × 64 dims × 4 bytes. ≈72 MB for a full 1,024-token context.</span></article>
+    </div>
+    <p>Hold on to that ≈72 KB/token figure. A trillion-parameter MLA model later in this guide stores roughly the same amount per token. The per-token cost barely changed. What changed is context length (128K instead of 1K), concurrency (thousands of sessions instead of one), and weights that no longer fit in one device. Those three multipliers are why inference becomes an infrastructure problem.</p>
+  </section>
+
+  <section id="not-training">
+    <h2>How an inference request behaves</h2>
+    <p>Training is a long, throughput-oriented batch job that changes model parameters. Inference holds those parameters fixed and answers requests online. The path is layered: an application calls an API gateway; the gateway routes to a serving framework such as vLLM or TensorRT-LLM; the framework drives model execution; and the runtime finally schedules work onto GPU hardware. <strong>The serving-framework layer is where our team will operate the service</strong>, but every layer beneath it can set the latency ceiling. On Nutanix, the gateway is the NAI Agent Gateway built on Envoy, the serving layer is KServe driving vLLM or NVIDIA NIM containers, and those containers run on NKP worker nodes with GPUs attached through AHV.</p>
+    <div class="layer-chain" aria-label="Layered inference request path">
+      <div><b>Application</b><span>prompt + policy</span></div><div><b>API gateway</b><span>NAI Agent Gateway · Envoy</span></div><div><b>Serving framework</b><span>KServe → vLLM / NIM</span></div><div><b>Execution</b><span>model graph + CUDA</span></div><div><b>GPU hardware</b><span>NKP node · AHV · HBM + fabric</span></div>
+    </div>
+    <div class="phase-grid">
+      <article class="phase"><b>PREFILL</b><p>The prompt is processed largely in parallel to build attention state. This phase is rich in matrix work and is usually compute-bound.</p></article>
+      <article class="phase decode"><b>DECODE</b><p>The model emits one token per forward pass, appends it to the sequence, then repeats. The loop is sequential and usually memory-bandwidth-bound.</p></article>
+    </div>
+    <p>Those phases produce different user-facing numbers. <strong>Time to first token (TTFT)</strong> captures queueing plus prefill. <strong>Tokens per second (TPS)</strong>, or its inverse inter-token latency (ITL), describes the decode stream. A service can begin quickly and finish slowly—or the reverse—because the two phases stress different resources.</p>
+    <dl class="metric-row">
+      <div class="metric"><dt>TTFT</dt><dd>Request arrival to the first visible token; dominated by queueing and prefill.</dd></div>
+      <div class="metric"><dt>TPS / ITL</dt><dd>Decode throughput, or the delay between streamed tokens.</dd></div>
+      <div class="metric"><dt>p50 / p90 / p99</dt><dd>The latency distribution, not one average. p99 exposes queueing, faults, and noisy neighbors.</dd></div>
+    </dl>
+    <p>These numbers are available directly on the platform. NAI endpoint metrics report TTFT, time per output token (TPOT, the same quantity as ITL), output tokens per second, request latency, and token usage. They can be filtered by API key, are backed by Prometheus, and can be exported over OpenTelemetry. Per-phase SLOs are therefore something the team can measure and enforce, not just a concept.</p>
+    <blockquote class="pull">The average tells you the machine is healthy. The tail tells you whether users agree.</blockquote>
+  </section>
+
+  <section id="latency">
+    <h2>A worked latency budget</h2>
+    <p class="lede">A latency SLO becomes useful only after it is split into terms owned by different parts of the system.</p>
+    <p>Consider an illustrative interactive request with a <strong>≈2,000-token prompt</strong>, an <strong>≈500-token answer</strong>, <strong>≈300 ms</strong> of prefill, and decode throughput of <strong>≈50 tokens/s</strong>. Ignoring small overlap effects, model time is:</p>
+    <div class="budget"><span>model latency</span> ≈ 0.3 s + (500 tokens ÷ 50 tokens/s) = <strong>≈10.3 s</strong></div>
+    <p>Decode contributes ≈10 seconds—about 97% of model time in this example. A faster prefill improves the first visible response, but it barely changes completion time. A faster decode changes completion time directly. That distinction prevents a team from celebrating a TTFT improvement while the user still waits just as long for the full answer.</p>
+    <div class="stack" aria-label="Illustrative latency budget by stage">
+      <div class="stack-row"><b>Ingress · ≈40 ms</b><p>TLS, gateway policy, and request parsing. Moved by network placement, connection reuse, and gateway capacity.</p></div>
+      <div class="stack-row"><b>Queue · ≈110 ms</b><p>Waiting for an eligible replica. Moved by admission control, replica count, scheduling policy, and warm capacity; this term often dominates p99 before average utilization looks high.</p></div>
+      <div class="stack-row"><b>Prefill · ≈300 ms</b><p>Prompt processing and initial KV construction. Moved by compute throughput, prompt length, batching, and prefill-pool capacity.</p></div>
+      <div class="stack-row"><b>Decode · ≈10,000 ms</b><p>≈500 serial token steps at ≈50 tokens/s. Moved by HBM bandwidth, decode batching, model size and precision, and decode-pool capacity.</p></div>
+      <div class="stack-row"><b>Egress · ≈50 ms</b><p>Streaming and client/network delivery. Moved by backpressure handling, network quality, and application behavior.</p></div>
+    </div>
+    <div class="budget"><span>end-to-end</span> ≈ 40 ms + 110 ms + 300 ms + 10,000 ms + 50 ms = <strong>≈10.5 s</strong></div>
+    <p>Two budgets should therefore be written separately. The <strong>first-token budget</strong> is ingress + queue + prefill + first-byte delivery, ≈500 ms here. The <strong>completion budget</strong> adds the decode stream, ≈10.5 seconds here. At capacity-review time, record both p50 and p99 for each term; otherwise queueing and fabric stalls disappear inside one opaque endpoint number.</p>
+  </section>
+
+  <section id="transformer">
+    <h2>The hardware mental model</h2>
+    <p>A decoder-only transformer repeats a block containing <strong>masked self-attention</strong> and a feed-forward <strong>MLP</strong>, wrapped by normalization and residual connections. Attention creates the KV cache; the MLP holds much of the parameter mass. That is enough anatomy for infrastructure sizing.</p>
+    <p>The <strong>roofline model</strong> supplies the key mental shortcut: arithmetic intensity—operations performed per byte moved—determines whether performance is capped by compute or memory bandwidth. Prefill generally sits nearer the compute roof; autoregressive decode repeatedly streams weights and a growing KV cache, so it usually sits on the bandwidth slope.</p>
+    <div class="pipeline" aria-label="Roofline diagram comparing prefill and decode">
+      <svg viewBox="0 0 720 390" role="img" aria-labelledby="rft rfd"><title id="rft">Roofline model for inference</title><desc id="rfd">Achievable performance rises with arithmetic intensity on the memory bandwidth slope, then flattens at the compute ceiling. Decode appears left of the ridge point and prefill appears to the right.</desc><defs><marker id="roofarrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--muted)"/></marker></defs>
+        <line x1="84" y1="320" x2="682" y2="320" stroke="var(--muted)" stroke-width="2" marker-end="url(#roofarrow)"/><line x1="84" y1="320" x2="84" y2="38" stroke="var(--muted)" stroke-width="2" marker-end="url(#roofarrow)"/>
+        <text x="383" y="366" text-anchor="middle" class="s-title">Arithmetic intensity · operations per byte →</text><text x="84" y="25" class="s-title">Achievable performance ↑</text>
+        <path d="M84 320L365 88H664" fill="none" stroke="var(--indigo)" stroke-width="5"/><line x1="365" y1="88" x2="365" y2="320" stroke="var(--line)" stroke-width="2" stroke-dasharray="7 7"/>
+        <text x="180" y="218" transform="rotate(-39 180 218)" class="s-small">memory-bandwidth ceiling</text><text x="510" y="75" text-anchor="middle" class="s-small">compute ceiling</text><text x="365" y="344" text-anchor="middle" class="s-small">ridge point</text>
+        <circle cx="205" cy="220" r="11" fill="var(--green)"/><text x="205" y="194" text-anchor="middle" class="s-title">Decode</text><text x="205" y="246" text-anchor="middle" class="s-small">moves bytes repeatedly</text>
+        <circle cx="530" cy="88" r="11" fill="var(--amber)"/><text x="530" y="122" text-anchor="middle" class="s-title">Prefill</text><text x="530" y="145" text-anchor="middle" class="s-small">reuses data for matrix work</text>
+      </svg>
+    </div>
+    <p>The ridge point is the balance between peak compute and memory bandwidth. Left of it, adding arithmetic units cannot help if bytes arrive too slowly. Right of it, more bandwidth alone cannot exceed the compute ceiling. The plot is conceptual rather than a benchmark: the useful act is placing each phase with measurements from the target GPU and batch shape.</p>
+    <div class="thesis-grid">
+      <article><b>HBM</b><p>Capacity holds weights, KV cache, and buffers; bandwidth feeds the execution units during decode.</p></article>
+      <article><b>SMs</b><p>Streaming multiprocessors and Tensor Cores provide the compute budget that prefill can consume.</p></article>
+      <article><b>NVLink</b><p>GPU interconnect extends the execution domain when one device cannot hold or compute the model.</p></article>
+    </div>
+    <p>A <strong>Mixture-of-Experts (MoE)</strong> layer uses a router to send each token to only a few expert MLPs out of many. That reduces FLOPs per token, but not the resident weight set: for low-latency serving, all experts still need to be addressable. In other words, you can compute with ≈32B active parameters while provisioning HBM for the whole ≈1T model.</p>
+    <p>Inside a node, NVLink/NVSwitch provides the high-bandwidth GPU fabric. Across nodes, InfiniBand or Ethernet carries collectives and expert-routing traffic. Once tensor or expert parallelism crosses that boundary, <strong>the interconnect becomes part of the accelerator</strong>—and topology, congestion, and failure domains become model-performance concerns.</p>
+  </section>
+
+  <section id="gpus">
+    <h2>GPU memory and bandwidth: the two numbers that matter</h2>
+    <p class="lede">For inference, a GPU is mostly described by two numbers: how many bytes its memory holds, and how fast it can read them.</p>
+    <p>Capacity decides <em>whether</em> a model and its KV cache fit. Bandwidth decides how fast decode can run once they do. At batch size 1, every decode step must read every active weight once, which gives a hard ceiling that no kernel optimization can beat:</p>
+    <div class="budget"><span>decode ceiling</span> tokens/s per stream ≤ aggregate memory bandwidth ÷ active-weight bytes read per token</div>
+    <div class="formulae">
+      <article class="formula-card"><b>DENSE · LLAMA 3.1 405B FP8 · 8×H100</b><div class="formula">≈26.8 TB/s ÷ ≈405 GB ≈ 66 tok/s</div><p>That is the theoretical ceiling before KV reads, collectives, and kernel overhead. It is why the ≈50 tokens/s figure in the latency budget above is realistic, not pessimistic.</p></article>
+      <article class="formula-card"><b>DENSE · 70B FP8 · 1× RTX PRO 6000</b><div class="formula">≈1.6 TB/s ÷ ≈70 GB ≈ 23 tok/s</div><p>The model fits in 96 GB, but GDDR7 bandwidth caps every stream. Capacity and bandwidth are separate purchasing decisions.</p></article>
+      <article class="formula-card"><b>MoE · GPT-OSS-120B MXFP4 · 1× RTX PRO 6000</b><div class="formula">≈1.6 TB/s ÷ ≈3 GB ≈ 530 tok/s</div><p>Only ≈5.1B active parameters are read per token, and most of them are ≈4.25-bit expert weights, so the ceiling rises by an order of magnitude. MoE shifts the pressure from bandwidth to capacity and routing.</p></article>
+      <article class="formula-card"><b>BATCHING · WHY IT PAYS</b><div class="formula">B streams share one weight read per step</div><p>Aggregate throughput rises roughly with batch size until KV reads or compute catch up. The HBM left over after weights sets the maximum batch, which is why KV capacity is the throughput lever.</p></article>
+    </div>
+    <p>The GPUs that NAI 2.8 officially supports span a wide range on both axes. When a model–GPU combination is on NAI's validated list, NAI calculates the resource requirements and GPU count automatically. Other GPUs may still run, but they lose automatic sizing and official support.</p>
+    <table class="decision-table" aria-label="NAI-supported GPUs by memory capacity and bandwidth">
+      <thead><tr><th>GPU</th><th>Memory</th><th>Bandwidth</th><th>GPU-to-GPU</th><th>Inference fit</th></tr></thead>
+      <tbody>
+        <tr><td>NVIDIA L40S</td><td data-label="Memory">48 GB GDDR6</td><td data-label="Bandwidth">≈0.86 TB/s</td><td data-label="GPU-to-GPU">PCIe Gen4 · no NVLink</td><td data-label="Inference fit">Small and mid models, embeddings, rerankers; vGPU/time-sliced consolidation.</td></tr>
+        <tr><td>NVIDIA A100 80GB</td><td data-label="Memory">80 GB HBM2e</td><td data-label="Bandwidth">≈2.0 TB/s</td><td data-label="GPU-to-GPU">NVLink (SXM)</td><td data-label="Inference fit">Installed-base workhorse; MIG for isolated fractional endpoints.</td></tr>
+        <tr><td>NVIDIA H100 / H100 NVL</td><td data-label="Memory">80 GB / 94 GB HBM3</td><td data-label="Bandwidth">≈3.35 / ≈3.9 TB/s</td><td data-label="GPU-to-GPU">NVLink 900 GB/s (SXM) · bridge on NVL</td><td data-label="Inference fit">The reference GPU for the sizing tables in this guide; FP8 native.</td></tr>
+        <tr><td>NVIDIA H200</td><td data-label="Memory">141 GB HBM3e</td><td data-label="Bandwidth">≈4.8 TB/s</td><td data-label="GPU-to-GPU">NVLink 900 GB/s</td><td data-label="Inference fit">Same compute class as H100 with ≈1.8× capacity: more KV per GPU, fewer shards.</td></tr>
+        <tr><td>NVIDIA B300</td><td data-label="Memory">288 GB HBM3e</td><td data-label="Bandwidth">≈8 TB/s</td><td data-label="GPU-to-GPU">NVLink 5 · 1.8 TB/s</td><td data-label="Inference fit">Frontier MoE models in fewer nodes; planned for Astra HGX deployments.</td></tr>
+        <tr><td>RTX PRO 6000 Blackwell Server Edition</td><td data-label="Memory">96 GB GDDR7</td><td data-label="Bandwidth">≈1.6 TB/s</td><td data-label="GPU-to-GPU">PCIe Gen5 only · no NVLink</td><td data-label="Inference fit">Economical capacity for single-GPU MoE and mid-size models. Tensor parallelism across cards pays a PCIe penalty.</td></tr>
+      </tbody>
+    </table>
+    <p class="source-note">Capacities and bandwidths are approximate vendor specifications for orientation. The supported-GPU list comes from the NAI 2.8 release material; confirm the model–GPU compatibility matrix for the exact release before committing hardware.</p>
+    <p>Two lessons follow. First, <strong>the same model can be capacity-feasible and latency-infeasible</strong> on a given GPU; check both numbers. Second, <strong>the interconnect column matters as soon as a model spans cards</strong>. Without NVLink, every tensor-parallel all-reduce crosses PCIe, which is a first-order effect in the GPU Farm field notes below.</p>
+  </section>
+
+  <section id="hardware">
+    <h2>Do the math: what today’s open models actually require</h2>
+    <p class="lede">Model selection is capacity planning. Before choosing a runtime, calculate the bytes that must live in HBM, the attention state each request adds, and the number of failure domains the replica crosses.</p>
+    <div class="formulae">
+      <article class="formula-card"><b>1 · WEIGHT MEMORY</b><div class="formula">parameters × bytes / parameter</div><p>BF16 = 2 bytes · FP8 = 1 byte · INT4 ≈ 0.5 byte. This is the floor, not the deployment budget.</p></article>
+      <article class="formula-card"><b>2 · KV CACHE</b><div class="formula">≈ 2 × layers × kv_heads × head_dim × bytes</div><p>That is per token, per live sequence. Multiply by all live tokens; GQA and MLA reduce the stored key/value channels dramatically.</p></article>
+      <article class="formula-card"><b>3 · GPU COUNT</b><div class="formula">ceil[(weights + live KV) ÷ 72 GB usable]</div><p>Here 72 GB is 90% of an 80 GB H100; the remaining 8 GB/GPU is reserved for runtime buffers, allocator fragmentation, and operational headroom.</p></article>
+      <article class="formula-card"><b>4 · NODE COUNT</b><div class="formula">ceil(planned GPUs ÷ 8 GPUs / node)</div><p>Cross the eight-GPU boundary and the rack fabric joins the critical path. Power and cooling scale in the same step.</p></article>
+    </div>
+    <div class="moe-rule"><strong>THE MoE RULE FOR LOW-LATENCY SERVING</strong><p>In the fully GPU-resident scenario sized here, all experts stay in HBM while only the active experts drive compute per token. Offload to host memory or NVMe can reduce HBM demand, but adds traffic and latency. <b>You provision the whole trillion for memory while burning ≈32B worth of FLOPs.</b></p></div>
+
+    <h3>A worked sizing comparison</h3>
+    <p>These are planning-level calculations for one specific scenario: FP8 weights kept fully in GPU memory for low-latency serving on H100 SXM GPUs with 80 GB HBM. Each row applies the 72 GB usable-HBM rule; where a concrete KV estimate is shown, it budgets one long sequence. “Capacity” is the formula result; “provisioned” rounds that result to the selected GPU topology. Real capacity planning repeats the live-KV term for target concurrency. This is not the minimum configuration that can run each model.</p>
+    <div class="model-table-wrap">
+      <table class="model-table">
+        <thead><tr><th>Model</th><th>Params<br>total / active</th><th>Weights<br>FP8</th><th>H100s<br>capacity / provisioned</th><th>Nodes</th><th>KV-cache / deployment note</th></tr></thead>
+        <tbody>
+          <tr><td>gpt-oss-120b<small>OpenAI · Apache 2.0 · ≈131K context</small></td><td data-label="Parameters">≈117B / ≈5.1B MoE</td><td data-label="FP8 weights">≈117 GB</td><td data-label="H100s: capacity / provisioned">≈2 / 2</td><td data-label="8-GPU nodes">≈1</td><td data-label="KV / deployment">117 GB ÷ 72 GB usable/GPU = 1.63 → 2 GPUs, leaving ≈27 GB of the usable envelope for live KV. Native MXFP4 can fit one 80 GB GPU.</td></tr>
+          <tr><td>Qwen3-235B-A22B<small>Alibaba · Apache 2.0</small></td><td data-label="Parameters">≈235B / ≈22B MoE</td><td data-label="FP8 weights">≈235 GB</td><td data-label="H100s: capacity / provisioned">≈4 / 4</td><td data-label="8-GPU nodes">≈1</td><td data-label="KV / deployment">235 GB ÷ 72 GB usable/GPU = 3.27 → 4 GPUs, leaving ≈53 GB of the usable envelope for workload-specific live KV.</td></tr>
+          <tr><td>Llama 3.1 405B<small>Meta · dense · ≈128K context</small></td><td data-label="Parameters">≈405B / ≈405B</td><td data-label="FP8 weights">≈405 GB</td><td data-label="H100s: capacity / provisioned">≈7 / 8</td><td data-label="8-GPU nodes">≈1</td><td data-label="KV / deployment">≈500 KB/token × ≈128K = ≈64 GB KV; (405 + 64) ÷ 72 = 6.51 → round to the published 8×H100 topology.</td></tr>
+          <tr><td>DeepSeek V3.1<small>DeepSeek · MIT · ≈128K context</small></td><td data-label="Parameters">≈671B / ≈37B MoE<small>≈685B including MTP module</small></td><td data-label="FP8 weights">≈685 GB</td><td data-label="H100s: capacity / provisioned">≈10 / 10</td><td data-label="8-GPU nodes">≈2</td><td data-label="KV / deployment">MLA planning value ≈70 KB/token × ≈128K = ≈9 GB; (685 + 9) ÷ 72 = 9.64 → 10 GPUs by capacity across two nodes.</td></tr>
+          <tr><td>Kimi K2<small>Moonshot AI · modified MIT · ≈128K context</small></td><td data-label="Parameters">≈1T / ≈32B MoE</td><td data-label="FP8 weights">≈1 TB</td><td data-label="H100s: capacity / provisioned">≈15 / 16</td><td data-label="8-GPU nodes">≈2</td><td data-label="KV / deployment">MLA ≈70 KB/token × ≈128K = ≈9 GB; (1,000 + 9) ÷ 72 = 14.01 → ceil to 15 GPUs by capacity, provision 16 across two full nodes. A published large deployment used 128×H200.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="compact-note"><p><strong>Same arithmetic, different GPUs in the Nutanix catalog.</strong> On <strong>B300</strong> (288 GB, ≈259 GB usable at 90%), Kimi K2's ≈1 TB FP8 weights need ceil(1,009 ÷ 259) = <strong>4 GPUs</strong>, which fit inside one 8-GPU HGX NVLink domain instead of spanning two nodes. On <strong>RTX PRO 6000</strong> (96 GB, ≈86 GB usable), the same model needs ceil(1,009 ÷ 86) = <strong>12 GPUs</strong> across two PCIe-only nodes, which works on paper but sends every collective over PCIe and the east-west network. At the other end, gpt-oss-120b in native MXFP4 (≈65 GB) fits on <strong>one</strong> RTX PRO 6000 with ≈21 GB of usable memory left for KV. Choosing a GPU SKU really means choosing how many failure domains a replica spans.</p></div>
+
+    <div class="infra-ladder" aria-label="Infrastructure ladder comparing model memory, GPU count, node count, and power">
+      <svg viewBox="0 0 720 500" role="img" aria-labelledby="lt ld"><title id="lt">Infrastructure ladder for five open-weight models</title><desc id="ld">Five bars increase from GPT OSS at two capacity-planned H100 GPUs to Kimi K2 provisioned across sixteen H100 GPUs. Blue shows FP8 weight memory and amber shows capacity beyond weights. Power labels use the approximately 10.2 kilowatt maximum whole-system envelope of a fully populated DGX H100 node.</desc>
+        <text x="24" y="30" class="ladder-label">FP8 weights versus planned HBM capacity</text><text x="24" y="54" class="ladder-small">Bars show planned topology · power = occupied DGX H100 max envelope</text>
+        <line x1="24" y1="382" x2="700" y2="382" class="ladder-axis"/>
+
+        <rect x="42" y="359.6" width="88" height="22.4" class="bar-headroom"/><rect x="42" y="365.6" width="88" height="16.4" class="bar-weight"/><line x1="42" y1="370.8" x2="130" y2="370.8" class="bar-line"/>
+        <text x="86" y="340" text-anchor="middle" class="ladder-count">≈2 GPUs</text><text x="86" y="414" text-anchor="middle" class="ladder-label">gpt-oss</text><text x="86" y="436" text-anchor="middle" class="ladder-small">≈1 node · ≤≈10.2 kW max</text>
+
+        <rect x="178" y="337.2" width="88" height="44.8" class="bar-headroom"/><rect x="178" y="349.1" width="88" height="32.9" class="bar-weight"/><path d="M178 370.8H266M178 359.6H266M178 348.4H266" class="bar-line"/>
+        <text x="222" y="318" text-anchor="middle" class="ladder-count">≈4 GPUs</text><text x="222" y="414" text-anchor="middle" class="ladder-label">Qwen3</text><text x="222" y="436" text-anchor="middle" class="ladder-small">≈1 node · ≤≈10.2 kW max</text>
+
+        <rect x="314" y="292.4" width="88" height="89.6" class="bar-headroom"/><rect x="314" y="325.3" width="88" height="56.7" class="bar-weight"/><path d="M314 370.8H402M314 359.6H402M314 348.4H402M314 337.2H402M314 326H402M314 314.8H402M314 303.6H402" class="bar-line"/>
+        <text x="358" y="273" text-anchor="middle" class="ladder-count">≈8 GPUs</text><text x="358" y="414" text-anchor="middle" class="ladder-label">Llama 405B</text><text x="358" y="436" text-anchor="middle" class="ladder-small">≈1 node · ≤≈10.2 kW max</text>
+
+        <rect x="450" y="270" width="88" height="112" class="bar-headroom"/><rect x="450" y="275.5" width="88" height="106.5" class="bar-weight"/><path d="M450 370.8H538M450 359.6H538M450 348.4H538M450 337.2H538M450 326H538M450 314.8H538M450 303.6H538M450 292.4H538M450 281.2H538" class="bar-line"/>
+        <text x="494" y="251" text-anchor="middle" class="ladder-count">≈10 GPUs</text><text x="494" y="414" text-anchor="middle" class="ladder-label">DeepSeek V3.1</text><text x="494" y="436" text-anchor="middle" class="ladder-small">≈2 nodes · ≤≈20.4 kW max</text>
+
+        <rect x="586" y="202.8" width="88" height="179.2" class="bar-headroom"/><rect x="586" y="242" width="88" height="140" class="bar-weight"/><path d="M586 370.8H674M586 359.6H674M586 348.4H674M586 337.2H674M586 326H674M586 314.8H674M586 303.6H674M586 292.4H674M586 281.2H674M586 270H674M586 258.8H674M586 247.6H674M586 236.4H674M586 225.2H674M586 214H674" class="bar-line"/>
+        <text x="630" y="183" text-anchor="middle" class="ladder-count">≈16 GPUs</text><text x="630" y="414" text-anchor="middle" class="ladder-label">Kimi K2</text><text x="630" y="436" text-anchor="middle" class="ladder-small">≈2 nodes · ≤≈20.4 kW max</text>
+
+        <rect x="24" y="462" width="13" height="13" class="bar-weight"/><text x="44" y="474" class="ladder-small">model weights</text><rect x="164" y="462" width="13" height="13" class="bar-headroom"/><text x="184" y="474" class="ladder-small">planned capacity beyond weights</text>
+      </svg>
+    </div>
+    <p>The jump from one node to two changes the problem qualitatively. Tensor collectives and expert routing leave the NVLink domain; replica placement now consumes rack-level power, cooling, and fabric; and any failure or drain operation can move a near-terabyte service footprint.</p>
+    <p class="source-note"><strong>Snapshot sources, checked September 24, 2026:</strong> <a href="https://huggingface.co/openai/gpt-oss-120b">OpenAI gpt-oss model card</a> · <a href="https://huggingface.co/RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8">Llama 3.1 405B FP8 model card</a> · <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-qwen-qwen3-235b-a22b-2507.html">Qwen3 model details</a> · <a href="https://huggingface.co/deepseek-ai/DeepSeek-V3.1">DeepSeek V3.1 model card</a> · <a href="https://github.com/MoonshotAI/Kimi-K2/blob/main/tech_report.pdf">Kimi K2 technical report</a> · <a href="https://github.com/kvcache-ai/Mooncake">Mooncake serving architecture (Kimi deployment reference)</a> · <a href="https://www.nvidia.com/en-us/data-center/h100/">NVIDIA H100 specifications</a> · <a href="https://nvidia.com/content/dam/en-zz/pt_br/Solutions/Data-Center/dgx-h100/dgx-h100-datasheet-ptbr-final.pdf">NVIDIA DGX H100 system-power datasheet</a>. Capacity figures are ≈ planning estimates, not performance benchmarks or minimum runnable configurations.</p>
+  </section>
+
+  <section id="kv">
+    <h2>KV cache: the concurrency multiplier</h2>
+    <p class="lede">Weights determine whether one replica fits. KV cache determines how many long-running requests that replica can serve at once.</p>
+    <p>For standard attention, the approximate BF16 KV bytes created per token are:</p>
+    <div class="budget"><span>KV bytes / token</span> ≈ 2 × layers × kv_heads × head_dim × bytes / element</div>
+    <p>The leading 2 stores both keys and values. Grouped-query attention reduces <code>kv_heads</code>; multi-head latent attention stores a compressed latent representation instead. Allocator metadata, block rounding, speculative branches, and other runtime buffers still require additional headroom.</p>
+    <div class="math">
+      <article><b>LLAMA 3.1 405B · BF16 KV</b><strong>≈500 KB / token</strong><span>≈500 KB × ≈128K tokens ≈64 GB for one full-context request.</span></article>
+      <article><b>MLA-CLASS PLANNING VALUE</b><strong>≈70 KB / token</strong><span>≈70 KB × ≈128K tokens ≈9 GB for one full-context request.</span></article>
+    </div>
+    <p>Now apply concurrency. Eight simultaneous ≈128K-token sessions on the Llama example require <strong>≈8 × 64 GB = ≈512 GB of KV cache</strong>. That is larger than the ≈405 GB FP8 weight set. On eight 80 GB H100s, the nominal 640 GB of HBM cannot hold ≈405 GB of weights plus ≈512 GB of live KV; the model may fit, but the workload does not.</p>
+    <p>The MLA-class planning value changes the shape: eight ≈128K sessions consume ≈72 GB of KV. That is still operationally meaningful, but it is no longer larger than the trillion-parameter weight set. Attention architecture is therefore an infrastructure input, not merely a model-quality detail.</p>
+    <div class="formulae">
+      <article class="formula-card"><b>CONCURRENCY LIMIT</b><div class="formula">floor(KV budget ÷ bytes per live sequence)</div><p>Use the admitted sequence length, not the advertised maximum context window.</p></article>
+      <article class="formula-card"><b>LIVE-TOKEN BUDGET</b><div class="formula">Σ(prompt tokens + generated tokens)</div><p>Track active tokens across the whole replica. Averages hide the long sessions that trigger OOMs.</p></article>
+    </div>
+    <p>Capacity policy should state three numbers explicitly: maximum admitted context, maximum live tokens per replica, and the HBM reserve that cannot be allocated to KV. Without those limits, a few long-context prefills can evict useful cache blocks, stall admission, or crash the worker even when request count appears low.</p>
+
+    <h3 class="subhead">What NAI does with the KV cache today</h3>
+    <p>Once KV cache is the concurrency limit, two platform features matter: sending a request to the replica that already holds its prefix, and spilling cold cache blocks somewhere cheaper than HBM. NAI 2.8 ships early versions of both.</p>
+    <div class="stack">
+      <div class="stack-row"><b>KV-cache-aware routing · Tech Preview</b><p>vLLM workers publish KV-cache events. The open-source llm-d inference scheduler, running as the Gateway API Inference Extension's endpoint picker (EPP), indexes which prefixes each replica holds and scores replicas on prefix match, KV utilization, queue depth, and active requests. Envoy in the Agent Gateway then forwards the request. For agents that resend a long system prompt and tool schema on every turn, a prefix hit skips most of prefill and cuts TTFT. It works only for local, same-cluster endpoints and cannot be combined with multi-node endpoints or KV offload.</p></div>
+      <div class="stack-row"><b>KV-cache offload · Tech Preview</b><p>Evictable KV blocks spill from GPU memory to host RAM (a memory-backed <code>/dev/shm</code> region) instead of being discarded, so a returning conversation avoids a full re-prefill. It is limited to vLLM, single-node, GPU-passthrough endpoints, and it requires at least <strong>1.2× the GPU memory per GPU in host RAM</strong>. That is a real sizing input: on an 8×H200 node, 1.2 × 141 GB × 8 ≈ <strong>1.35 TB of host RAM</strong> set aside for the cache. This improves repeat-prompt TTFT, not decode speed.</p></div>
+      <div class="stack-row"><b>Roadmap · tiered and shared KV</b><p>The Nutanix AI-storage architecture extends the hierarchy to GPU HBM → host RAM → local NVMe → a remote, distributed Nutanix block store, using NVIDIA NIXL for the data path. The goal is a persistent, cross-node KV cache that prefill and decode pools can share. This is design direction, not shipped NAI behavior.</p></div>
+    </div>
+  </section>
+
+  <section id="parallelism">
+    <h2>Parallelism is a fabric decision</h2>
+    <p>When a model or target throughput exceeds one GPU, the serving framework must divide work. The division method tells the network what kind of traffic it must carry and how a fault propagates.</p>
+    <table class="decision-table" aria-label="Parallelism decision table">
+      <thead><tr><th>Mode</th><th>What it splits</th><th>Use it when</th><th>Fabric demand</th><th>Characteristic failure</th></tr></thead>
+      <tbody>
+        <tr><td>Tensor parallelism</td><td data-label="What it splits">Individual layer operations across GPUs.</td><td data-label="When to use">A layer or model cannot fit one GPU, or one GPU cannot meet latency.</td><td data-label="Fabric demand">Frequent collectives; keep inside NVLink/NVSwitch where possible.</td><td data-label="Failure mode">One slow rank delays every collective; one rank loss takes down the replica.</td></tr>
+        <tr><td>Pipeline parallelism</td><td data-label="What it splits">Contiguous layer stages across GPUs or nodes.</td><td data-label="When to use">The model spans devices and stage balance is tractable.</td><td data-label="Fabric demand">Activation transfer between stages; inter-node links can work with careful partitioning.</td><td data-label="Failure mode">Pipeline bubbles and the slowest stage cap throughput.</td></tr>
+        <tr><td>Expert parallelism</td><td data-label="What it splits">MoE experts across devices.</td><td data-label="When to use">The full expert set exceeds a single memory domain.</td><td data-label="Fabric demand">Token all-to-all traffic; topology and congestion are first-order concerns.</td><td data-label="Failure mode">Hot experts or skewed routing create stragglers and fabric hotspots.</td></tr>
+        <tr><td>Data parallelism</td><td data-label="What it splits">Independent requests across complete replicas.</td><td data-label="When to use">One replica fits and horizontal throughput is the goal.</td><td data-label="Fabric demand">Low synchronization on the inference path; storage and ingress scale with replicas.</td><td data-label="Failure mode">Poor load balancing leaves one replica queued while others idle.</td></tr>
+      </tbody>
+    </table>
+    <p>The default infrastructure preference is simple: fit tensor-parallel ranks inside one high-bandwidth GPU domain, then scale with independent replicas. Cross a node boundary only when model capacity or measured throughput requires it, because every added rank enlarges the synchronous failure domain.</p>
+    <p>NAI follows the same order. Tensor parallelism inside one node is the standard vLLM path. Multi-node serving, which uses pipeline parallelism across nodes via KServe's <code>LLMInferenceService</code> and a LeaderWorkerSet of pods, is a Tech Preview in NAI 2.8. It cannot be combined with speculative decoding or KV-cache offload. Model replicas (data parallelism) are scaled as endpoint instances.</p>
+
+    <h3 class="subhead">Three networks, not one</h3>
+    <p>The Nutanix AI Factory reference architecture (RA-2189) and the Astra networking design separate traffic by what it needs, because collectives and user traffic have nothing in common.</p>
+    <table class="decision-table" aria-label="Network planes in the Nutanix AI Factory">
+      <thead><tr><th>Plane</th><th>Carries</th><th>Nutanix mechanism</th><th>Isolation</th></tr></thead>
+      <tbody>
+        <tr><td>North–south</td><td data-label="Carries">Tenant API calls, Kubernetes API/pod/service traffic, storage access, management.</td><td data-label="Mechanism">Flow virtual networking: per-tenant VPCs backed by VRFs, VXLAN/EVPN subnets mapped to Prism Central projects; BlueField DPUs can take over overlay termination and policy.</td><td data-label="Isolation">Flow VPC, routing and security policy, project RBAC.</td></tr>
+        <tr><td>East–west GPU fabric</td><td data-label="Carries">NCCL collectives, expert all-to-all, KV transfer, RDMA storage reads.</td><td data-label="Mechanism">InfiniBand (UFM-managed) or RoCEv2 / Spectrum-X Ethernet, attached to VMs by NIC passthrough or 1:1 SR-IOV virtual functions to bypass the AHV virtual switch.</td><td data-label="Isolation">InfiniBand partition keys, switch VLAN/VNI mapping, or DPU e-switch policy. The GPU zone has no external routing.</td></tr>
+        <tr><td>Out-of-band</td><td data-label="Carries">BMC, Redfish, imaging, hardware health.</td><td data-label="Mechanism">Foundation Central and Nico for discovery, health checks, and AHV imaging.</td><td data-label="Isolation">Separate management zone.</td></tr>
+      </tbody>
+    </table>
+    <p>There is a trade-off here. Full NIC passthrough gives near-native RDMA performance, but it removes the host from the enforcement path, so tenant isolation then depends entirely on the physical fabric. SR-IOV or DPU enforcement keeps Nutanix in the loop, which matters for multi-tenant AI clouds.</p>
+
+    <h3 class="subhead">Serving topology: separate unlike work</h3>
+    <div class="pipeline" aria-label="Disaggregated serving topology on NKP">
+      <svg viewBox="0 0 720 390" role="img" aria-labelledby="dst dsdesc"><title id="dst">Disaggregated prefill and decode serving topology</title><desc id="dsdesc">Requests pass from a gateway to a router and admission queue, then to a compute-oriented prefill pool. KV state transfers over the fabric into a bandwidth-oriented decode pool, which streams tokens to clients. NKP schedules and scales both pools.</desc><defs><marker id="dsarrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <rect x="24" y="54" width="110" height="62" rx="8" class="s-box"/><text x="79" y="82" text-anchor="middle" class="s-title">Gateway</text><text x="79" y="102" text-anchor="middle" class="s-small">auth + policy</text>
+        <rect x="174" y="54" width="130" height="62" rx="8" class="s-box"/><text x="239" y="82" text-anchor="middle" class="s-title">Router</text><text x="239" y="102" text-anchor="middle" class="s-small">admission + queue</text>
+        <rect x="354" y="28" width="150" height="114" rx="8" class="s-main"/><text x="429" y="66" text-anchor="middle" class="s-title">Prefill pool</text><text x="429" y="89" text-anchor="middle" class="s-small">compute-oriented</text><text x="429" y="111" text-anchor="middle" class="s-small">prompt → KV state</text>
+        <rect x="554" y="28" width="142" height="114" rx="8" class="s-good"/><text x="625" y="66" text-anchor="middle" class="s-title">Decode pool</text><text x="625" y="89" text-anchor="middle" class="s-small">bandwidth-oriented</text><text x="625" y="111" text-anchor="middle" class="s-small">KV → token stream</text>
+        <path d="M134 85H166M304 85H346M504 85H546" class="s-line" marker-end="url(#dsarrow)"/><text x="525" y="69" text-anchor="middle" class="s-small">KV transfer</text>
+        <rect x="174" y="196" width="330" height="62" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.7"/><text x="339" y="222" text-anchor="middle" class="s-title">Fabric + bounded transfer queue</text><text x="339" y="243" text-anchor="middle" class="s-small">backpressure prevents prefill from overrunning decode</text>
+        <path d="M429 142V188M625 142V227H512" class="s-line" marker-end="url(#dsarrow)"/>
+        <rect x="174" y="308" width="522" height="48" rx="8" class="s-good"/><text x="435" y="329" text-anchor="middle" class="s-title">NKP schedules, scales, and health-gates both pools</text><text x="435" y="347" text-anchor="middle" class="s-small">separate placement and capacity policies · one service SLO</text>
+        <path d="M339 258V300" class="s-line" marker-end="url(#dsarrow)"/>
+      </svg>
+    </div>
+    <p>Disaggregation exists for one infrastructure reason: <strong>prefill and decode have different scaling curves</strong>. Separate pools let compute-heavy prompt processing scale without forcing the same replica count, GPU type, or batching policy onto bandwidth-heavy token generation. The cost is a new KV-transfer path and queue that must be capacity-limited, observed, and included in failure testing.</p>
+    <div class="compact-note"><p><strong>Where Nutanix is today:</strong> prefill/decode disaggregation is <em>not</em> a generally available NAI feature. The underlying NAI KServe integration already includes an <code>LLMInferenceService</code> example with separate prefill and decode vLLM workers coordinated by the llm-d endpoint picker, and the NAI roadmap names P/D disaggregation, followed by shared caching, as a next step. Design reviews should treat the figure above as the target shape and plan today's endpoints as unified replicas.</p></div>
+  </section>
+
+  <section id="speed">
+    <h2>A short runtime pointer</h2>
+    <p>Kernel fusion, speculative decoding, batching, caching, parallelism, and quantization all matter, but they are not the center of this pre-read. Treat them as ways to reshape the infrastructure bill: quantization lowers bytes per weight, caching trades compute for memory, batching raises utilization, and parallelism spends interconnect bandwidth. In NAI, most of these are exposed as vLLM engine arguments on the endpoint, validated at creation time in 2.8, with speculative decoding as a supported option. Part 2 of the visual study guide explains those mechanisms in detail.</p>
+  </section>
+
+  <section id="production">
+    <h2>The infrastructure bill of materials</h2>
+    <p>Once the model footprint is known, a production replica becomes a concrete bill of materials—not an abstract endpoint.</p>
+    <div class="stack">
+      <div class="stack-row"><b>Accelerators</b><p>Enough aggregate HBM for weights plus headroom, arranged into the smallest practical number of high-bandwidth NVLink or NVSwitch domains.</p></div>
+      <div class="stack-row"><b>Host platform</b><p>CPU, RAM (including ≥1.2× GPU memory per GPU if NAI KV offload is enabled), PCIe lanes, NUMA topology, node-local NVMe, AHV GPU passthrough or vGPU, and a validated VM or bare-metal configuration.</p></div>
+      <div class="stack-row"><b>Fabric</b><p>Low-latency, high-throughput east-west networking for collectives, expert routing, KV transfer, replica loading, and failure recovery, kept separate from north–south Flow VPC traffic.</p></div>
+      <div class="stack-row"><b>Storage path</b><p>Objects for durable model imports, corpora, and checkpoints; a Files RWX share as the live model repository every replica reads; enough aggregate read throughput (NFS over RDMA where available) to load replicas without turning a rollout into an outage.</p></div>
+      <div class="stack-row"><b>Facility</b><p>A fully populated DGX H100 is rated at ≈10.2 kW maximum whole-system power. The two-node DeepSeek V3.1 and Kimi K2 sizing scenarios create a ≤≈20.4 kW IT load envelope before rack switching, external storage, and cooling/PUE.</p></div>
+      <div class="stack-row"><b>Operations</b><p>Admission control, topology-aware placement, warm capacity, health gates, telemetry, upgrade sequencing, spare capacity, and rollback.</p></div>
+    </div>
+    <div class="budget"><span>cold-start lower bound</span> = model bytes ÷ effective end-to-end load bandwidth</div>
+    <p>A container being “Running” proves almost nothing. The replica is ready only after weight shards stream from the shared model repository, load into HBM, allocate KV blocks, establish the distributed group, and pass a model-level health check. For the ≈1T-parameter Kimi K2 scenario, that path moves ≈1 TB before the first useful request.</p>
+  </section>
+
+  <section id="nutanix">
+    <h2>The inference stack on Nutanix</h2>
+    <p>The model server is only one process in a layered system. Nutanix contributes everything around it: hardware bring-up, the GPU-node control plane, virtualization, Kubernetes, the model-serving platform, storage, and network policy. Each offering has a specific job rather than acting as a universal AI layer. The umbrella that packages them into an AI Factory is <strong>Project Astra</strong>.</p>
+
+    <h3 class="subhead">Project Astra: from GPU server to inference endpoint</h3>
+    <p>Astra is Nutanix's AI Factory program. Its promise is "user intent → ready-to-use GPU or inference service": discovery, imaging, GPU allocation, VM provisioning, tenancy, storage, networking, drivers, and validation happen behind one orchestrated workflow instead of a runbook. It targets two audiences: <strong>neoclouds and service providers</strong> selling GPU-, VM-, Kubernetes-, and token-as-a-service to many tenants, and <strong>enterprises</strong> building on-premises AI Factories without assembling the stack by hand. Astra 1.0 is targeting general availability in January 2027, and Astra 1.2 in March 2027.</p>
+    <div class="thesis-chain"><span>GPU servers</span> → Foundation Central + Nico (discover, health-check, image) → NIM (claim, build clusters) → AHV + COCI (GPU VMs) → Prism Central projects &amp; resource groups (tenancy) → NKP (workload clusters) → NAI (endpoints)</div>
+    <p>In this chain, NIM is the Nutanix infrastructure manager, not NVIDIA's NIM inference microservices, which appear later inside NAI. The division of labor is the important part: <strong>Astra provisions and operates the infrastructure; NKP provides Kubernetes; NAI deploys, governs, and serves models.</strong> The inference-specific problems in this guide (GPU topology, fabric isolation, capacity, lifecycle) are Astra's problems. Endpoint creation, routing, and model governance are NAI's.</p>
+
+    <h3 class="subhead">COCI: a control plane built for GPU nodes</h3>
+    <p>A classic Nutanix HCI cluster runs a storage data path on every node. GPU servers do not need one. Their job is to keep accelerators busy, and every CPU core or NVMe drive spent on a distributed storage fabric is a cost. <strong>COCI (Centralized Operations for Cluster Infrastructure)</strong> is the answer: a lightweight cluster control plane, typically three pods running on a Zagreus cluster, that Prism Central sees as a compute cluster.</p>
+    <div class="stack">
+      <div class="stack-row"><b>What it runs</b><p>VM management and hypervisor services (Genesis, Acropolis) for <strong>compute-only GPU nodes</strong>: VM scheduling, GPU-node lifecycle and health, expansion, upgrades, and v4 APIs. The design target is ≈128 GPU nodes per COCI cluster, bounded by subsystem and blast-radius limits.</p></div>
+      <div class="stack-row"><b>What it does not run</b><p>No HCI storage data path and no model serving. GPU-node VMs boot from volumes exported by a separate infrastructure cluster over <strong>CCVS (Cross-Cluster Volume Storage)</strong> and iSCSI, so storage capacity scales independently of GPU capacity.</p></div>
+      <div class="stack-row"><b>Why inference cares</b><p>A COCI cluster is a failure and maintenance domain. Its size bounds how many GPU nodes one control-plane incident or upgrade can touch. Each GPU node belongs to exactly one COCI cluster, and topology-aware node selection (which nodes share NVLink or a leaf switch) is still being modeled explicitly.</p></div>
+    </div>
+
+    <h3 class="subhead">Figure 1 · The inference stack on Nutanix</h3>
+    <div class="pipeline" aria-label="Layered inference stack with Nutanix offerings mapped to each layer">
+      <svg viewBox="0 0 720 604" role="img" aria-labelledby="nst nst-desc"><title id="nst">The inference stack on Nutanix</title><desc id="nst-desc">A request moves from applications through the NAI Agent Gateway, KServe with vLLM or NIM, NKP GPU node pools, AHV GPU virtual machines managed by COCI, and GPU hardware with its fabrics. Files, Objects, and Volumes provide storage. Project Astra and Prism Central span the stack.</desc><defs><marker id="narrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <text x="24" y="31" class="s-title">Request path</text><text x="696" y="31" text-anchor="end" class="s-small">Nutanix responsibility</text>
+        <rect x="24" y="52" width="420" height="58" rx="7" class="s-box"/><text x="42" y="78" class="s-title">Applications + agents</text><text x="42" y="98" class="s-small">coding agents · chat · RAG · MCP tools</text><rect x="468" y="57" width="228" height="48" rx="7" class="s-good"/><text x="582" y="78" text-anchor="middle" class="s-title">NAI Agent Gateway</text><text x="582" y="96" text-anchor="middle" class="s-small">Envoy · API keys · EPP routing</text>
+        <path d="M234 110V126" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="130" width="420" height="58" rx="7" class="s-main"/><text x="42" y="156" class="s-title">Serving framework</text><text x="42" y="176" class="s-small">KServe InferenceService → vLLM / NVIDIA NIM pods</text><rect x="468" y="135" width="228" height="48" rx="7" class="s-good"/><text x="582" y="156" text-anchor="middle" class="s-title">NAI control plane</text><text x="582" y="174" text-anchor="middle" class="s-small">catalog · sizing · endpoint lifecycle</text>
+        <path d="M234 188V204" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="208" width="420" height="58" rx="7" class="s-box"/><text x="42" y="234" class="s-title">Kubernetes</text><text x="42" y="254" class="s-small">GPU node pools · NVIDIA GPU Operator · DCGM</text><rect x="468" y="213" width="228" height="48" rx="7" class="s-good"/><text x="582" y="234" text-anchor="middle" class="s-title">NKP</text><text x="582" y="252" text-anchor="middle" class="s-small">management + workload clusters</text>
+        <path d="M234 266V282" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="286" width="420" height="58" rx="7" class="s-box"/><text x="42" y="312" class="s-title">GPU worker VMs</text><text x="42" y="332" class="s-small">passthrough · vGPU · MIG inside the guest</text><rect x="468" y="291" width="108" height="48" rx="7" class="s-good"/><text x="522" y="312" text-anchor="middle" class="s-title">AHV</text><text x="522" y="330" text-anchor="middle" class="s-small">GPU VMs</text><rect x="588" y="291" width="108" height="48" rx="7" class="s-good"/><text x="642" y="312" text-anchor="middle" class="s-title">COCI</text><text x="642" y="330" text-anchor="middle" class="s-small">≈128 GPU nodes</text>
+        <path d="M234 344V360" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="364" width="420" height="66" rx="7" class="s-main"/><text x="42" y="391" class="s-title">GPU hardware + fabric</text><text x="42" y="412" class="s-small">HGX · MGX · RTX PRO 6000 · B300 · NVLink · IB / RoCE</text><rect x="468" y="373" width="108" height="48" rx="7" class="s-good"/><text x="522" y="394" text-anchor="middle" class="s-title">Flow</text><text x="522" y="412" text-anchor="middle" class="s-small">N–S VPCs</text><rect x="588" y="373" width="108" height="48" rx="7" class="s-good"/><text x="642" y="394" text-anchor="middle" class="s-title">SR-IOV</text><text x="642" y="412" text-anchor="middle" class="s-small">E–W RDMA</text>
+        <text x="24" y="462" class="s-small">Storage · Nutanix Unified Storage</text>
+        <rect x="24" y="472" width="216" height="54" rx="7" class="s-good"/><text x="132" y="495" text-anchor="middle" class="s-title">Files · RWX PVC</text><text x="132" y="514" text-anchor="middle" class="s-small">live weights at /mnt/models</text>
+        <rect x="252" y="472" width="216" height="54" rx="7" class="s-good"/><text x="360" y="495" text-anchor="middle" class="s-title">Objects · S3</text><text x="360" y="514" text-anchor="middle" class="s-small">imports · corpora · checkpoints</text>
+        <rect x="480" y="472" width="216" height="54" rx="7" class="s-good"/><text x="588" y="495" text-anchor="middle" class="s-title">Volumes · CCVS</text><text x="588" y="514" text-anchor="middle" class="s-small">VM boot disks · vector DBs</text>
+        <rect x="24" y="542" width="672" height="46" rx="7" class="s-main"/><text x="360" y="562" text-anchor="middle" class="s-title">Project Astra + Prism Central</text><text x="360" y="580" text-anchor="middle" class="s-small">orchestration · projects &amp; resource groups · fleet visibility across every layer</text>
+      </svg>
+    </div>
+
+    <div class="stack">
+      <div class="stack-row"><b>Nutanix Enterprise AI (NAI)</b><p>A Kubernetes-native platform for deploying and governing LLM endpoints. An operator picks a model from the validated catalog (Hugging Face, NVIDIA NGC/NIM, or a manual import); NAI selects the runtime and GPU profile, calculates resources, creates KServe objects and storage, and exposes an OpenAI-compatible endpoint with an API key. NAI 2.8 (August 2026) adds fine-grained RBAC and model sharing, generally available fine-tuning and MCP server management, air-gapped and non-catalog NIM import, and Tech Previews of multi-node inference, KV-aware routing, and KV offload. It runs on NKP and, per 2.8 material, on EKS, AKS, and GKE.</p></div>
+      <div class="stack-row"><b>NKP</b><p>Runs the management and workload Kubernetes clusters that host NAI. For inference it provides dedicated GPU node pools with their own images, labels, and taints, and the NVIDIA GPU Operator (driver, container toolkit, device plugin, GPU Feature Discovery, MIG Manager, DCGM exporter). The node-pool autoscaler can add GPU workers, but only if AHV has compatible free GPUs. AI Navigator, NKP's conversational ops assistant, helps troubleshoot pending pods and missing GPU resources.</p></div>
+      <div class="stack-row"><b>AHV</b><p>Attaches GPUs to NKP worker VMs. <strong>Whole-GPU passthrough</strong> is the default for large or multi-GPU models. <strong>Passthrough plus MIG inside the guest</strong> gives isolated fractional GPUs (MIG-backed vGPU profiles are not supported for NKP VMs). <strong>vGPU</strong> trades performance and licensing for consolidation. Astra adds GPU topology exposure to VMs, device bundles that pair GPUs with their east-west NICs, and topology-aware placement, because NUMA, PCIe, and NVLink locality decide tensor-parallel speed.</p></div>
+      <div class="stack-row"><b>COCI</b><p>The GPU-node control plane described above: compute-only nodes, VM lifecycle, and health at ≈128-node scale, with no HCI data path.</p></div>
+      <div class="stack-row"><b>Flow</b><p>Provides per-tenant VPCs, subnets, and security policy for north–south and Kubernetes traffic, scoped to Prism Central projects. It deliberately does <em>not</em> sit in the GPU collective path; that fabric is isolated by InfiniBand partition keys or switch segmentation.</p></div>
+      <div class="stack-row"><b>Files</b><p><strong>The live model repository.</strong> NAI creates one ReadWriteMany PVC per model on a Files share (NFSv4 through the Nutanix CSI driver), and every replica's vLLM or NIM pod mounts it at <code>/mnt/models</code>. The Files AI Performance Profile adds SR-IOV, iSER, and NFS over RDMA to shorten weight loading. Nutanix Unified Storage material cites ≈10 GB/s sequential read per node, with ≈20 GB/s per node on the NFS-over-RDMA roadmap.</p></div>
+      <div class="stack-row"><b>Objects</b><p><strong>The durable, S3-compatible source.</strong> It holds model imports (including air-gapped NIM imports), RAG corpora, datasets, fine-tuning checkpoints, logs, and archives. It is where bytes arrive and are retained, not where replicas read from on every start. A published four-node all-flash benchmark reached ≈14 GB/s with 8 MB objects; S3 over RDMA is emerging.</p></div>
+      <div class="stack-row"><b>Prism Central</b><p>Holds projects and resource groups (the tenancy boundary for GPUs and networks in Astra) and provides the fleet view: capacity pressure, maintenance state, placement, and the shared blast radius behind an apparently healthy endpoint.</p></div>
+    </div>
+
+    <h3 class="subhead">Who owns what</h3>
+    <table class="decision-table" aria-label="Responsibility matrix for the inference platform">
+      <thead><tr><th>Layer</th><th>Primary owner</th><th>Concrete responsibility</th><th>Nutanix component</th></tr></thead>
+      <tbody>
+        <tr><td>Service policy</td><td data-label="Primary owner">AI platform team</td><td data-label="Responsibility">Approved model, endpoint contract, rollout policy, and service SLO.</td><td data-label="Nutanix component">Nutanix Enterprise AI</td></tr>
+        <tr><td>Scheduling</td><td data-label="Primary owner">Platform team</td><td data-label="Responsibility">GPU node pools, GPU Operator and MIG geometry, placement, health probes, endpoint instance counts, and warm capacity.</td><td data-label="Nutanix component">NKP + NAI (KServe)</td></tr>
+        <tr><td>GPU-node lifecycle</td><td data-label="Primary owner">AI Factory / infrastructure team</td><td data-label="Responsibility">Discovery, imaging, health checks, compute-only cluster membership, upgrades, and tenant resource groups.</td><td data-label="Nutanix component">Astra: Foundation Central, Nico, NIM, COCI, Prism Central</td></tr>
+        <tr><td>Compute envelope</td><td data-label="Primary owner">Virtualization / compute team</td><td data-label="Responsibility">GPU passthrough/vGPU mode, device bundles, VM boundaries, NUMA and PCIe locality, and maintenance drain plans.</td><td data-label="Nutanix component">AHV</td></tr>
+        <tr><td>Networks</td><td data-label="Primary owner">Network team</td><td data-label="Responsibility">Tenant VPCs and policy north–south; collective and KV-transfer bandwidth, partition keys, congestion isolation, and path telemetry east–west.</td><td data-label="Nutanix component">Flow (N–S) · SR-IOV/passthrough + physical fabric (E–W)</td></tr>
+        <tr><td>Artifact storage</td><td data-label="Primary owner">Storage team</td><td data-label="Responsibility">Import durability and versioning, the RWX model repository, load-path throughput, and VM boot volumes for GPU nodes.</td><td data-label="Nutanix component">Objects + Files + Volumes (CCVS)</td></tr>
+        <tr><td>Fleet operations</td><td data-label="Primary owner">Infrastructure operations</td><td data-label="Responsibility">Capacity, maintenance coordination, resource pressure, and cross-layer incident context.</td><td data-label="Nutanix component">Prism Central</td></tr>
+      </tbody>
+    </table>
+    <p>These are design-review owners, not silos. A p99 TTFT regression can begin in a saturated endpoint, a congested fabric, a slow weight load from Files, or a GPU node being drained in COCI. The runbook must preserve the cross-layer path even when each dashboard has a different owner.</p>
+
+    <h3 class="subhead">Figure 2 · The weight lifecycle in NAI</h3>
+    <p>Weight loading is a storage-and-network pipeline before it is a GPU operation. In NAI, bytes are written once into a shared Files volume and then read by every replica that starts, which makes the Files read path the cold-start path.</p>
+    <div class="pipeline" aria-label="Model weight lifecycle from import through a Nutanix Files RWX volume into GPU HBM">
+      <svg viewBox="0 0 720 320" role="img" aria-labelledby="wlt wld"><title id="wlt">The weight lifecycle in NAI</title><desc id="wld">Model files are imported from Hugging Face, NVIDIA NGC, or a Nutanix Objects bucket into a Nutanix Files read-write-many volume. Each replica's vLLM or NIM pod mounts the volume at /mnt/models and loads weights into GPU HBM. Optional node-local caching is available through KServe LocalModelCache.</desc><defs><marker id="warrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <rect x="26" y="60" width="166" height="92" rx="8" class="s-box"/><text x="109" y="91" text-anchor="middle" class="s-title">Import source</text><text x="109" y="113" text-anchor="middle" class="s-small">Hugging Face · NGC · or</text><text x="109" y="134" text-anchor="middle" class="s-small">Objects (air-gapped)</text>
+        <rect x="277" y="60" width="166" height="92" rx="8" class="s-good"/><text x="360" y="91" text-anchor="middle" class="s-title">Files · RWX PVC</text><text x="360" y="113" text-anchor="middle" class="s-small">one volume per model</text><text x="360" y="134" text-anchor="middle" class="s-small">shared by all replicas</text>
+        <rect x="528" y="60" width="166" height="92" rx="8" class="s-main"/><text x="611" y="91" text-anchor="middle" class="s-title">GPU HBM</text><text x="611" y="113" text-anchor="middle" class="s-small">active weights + KV</text><text x="611" y="134" text-anchor="middle" class="s-small">ready only after load</text>
+        <path d="M196 106H269" class="s-line" marker-end="url(#warrow)"/><text x="234" y="94" text-anchor="middle" class="s-small">import</text><text x="234" y="126" text-anchor="middle" class="s-small">once</text><path d="M447 106H520" class="s-line" marker-end="url(#warrow)"/><text x="485" y="94" text-anchor="middle" class="s-small">NFS</text><text x="485" y="126" text-anchor="middle" class="s-small">(RDMA)</text>
+        <text x="485" y="176" text-anchor="middle" class="s-small">mounted at /mnt/models on every replica</text>
+        <rect x="26" y="196" width="668" height="90" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.7"/><text x="46" y="224" class="s-title">Cold start is the whole path</text><text x="46" y="247" class="s-small">schedule on GPU node → mount PVC → read shards → deserialize → load HBM → allocate KV → form NCCL group</text><text x="46" y="269" class="s-small">→ graph capture / compile → model-level health check → Agent Gateway routes traffic</text>
+      </svg>
+    </div>
+    <div class="budget"><span>cold-start lower bound</span> = model bytes ÷ effective end-to-end load bandwidth</div>
+    <p>For an illustrative ≈400 GB FP8 weight set, a Files node sustaining the ≈10 GB/s sequential read cited for Nutanix Unified Storage gives <strong>≈400 GB ÷ ≈10 GB/s = ≈40 seconds</strong> as the floor, before deserialization, KV allocation, NCCL group formation, graph capture, and health checks. At a more typical ≈5 GB/s effective path it is ≈80 seconds. Measured reality can be much worse. Internal troubleshooting logs have recorded vLLM taking ≈140 seconds to load ≈40 GB of a 4-bit 70B model on L40S, an effective ≈0.3 GB/s, because deserialization and quantization handling, not storage, dominated. The slowest sustained stage sets the floor, so <strong>measure the load, don't derive it from a spec sheet</strong>.</p>
+    <p>Two levers move this number on Nutanix. <strong>NFS over RDMA</strong> with the Files AI Performance Profile shortens the network and virtualization overhead of the read. <strong>GPUDirect Storage</strong>, which moves data from storage into GPU memory without bouncing through host RAM, cut a 13B model load from ≈12.7 s to ≈3.9 s in a Nutanix Unified Storage test; GDS loading into NAI is tracked work, not a shipped feature. KServe's LocalModelCache can also pre-stage copies onto node-local disks, but it is opt-in; the default NAI path reads over the Files mount.</p>
+    <h3 class="subhead">Storage hierarchy by temperature</h3>
+    <table class="decision-table" aria-label="Approximate storage hierarchy for inference">
+      <thead><tr><th>Tier</th><th>Approximate access scale</th><th>What belongs there</th><th>Design question</th></tr></thead>
+      <tbody>
+        <tr><td>Objects</td><td data-label="Access scale">≈milliseconds to tens of milliseconds</td><td data-label="Contents">Model imports and air-gapped NIM bundles, RAG corpora, datasets, fine-tuning checkpoints, adapters, logs, and archives.</td><td data-label="Design question">Is every approved model version and rollback target retained here, independent of the serving cluster?</td></tr>
+        <tr><td>Files (RWX)</td><td data-label="Access scale">≈milliseconds</td><td data-label="Contents">The live NAI model repository mounted by every replica, plus shared configuration, notebooks, and evaluation inputs.</td><td data-label="Design question">Can the share sustain concurrent loads for a full rollout wave without starving running replicas?</td></tr>
+        <tr><td>Node NVMe</td><td data-label="Access scale">≈microseconds to milliseconds</td><td data-label="Contents">Optional LocalModelCache copies, compile caches, conversion outputs, and a future KV spill tier.</td><td data-label="Design question">Is cache identity tied to an immutable model digest, and what survives a node re-image?</td></tr>
+        <tr><td>Host RAM</td><td data-label="Access scale">≈sub-microsecond</td><td data-label="Contents">NAI KV-cache offload (≥1.2× GPU memory per GPU), page cache for recently read weights.</td><td data-label="Design question">Has pod memory sizing included the <code>/dev/shm</code> KV tier?</td></tr>
+        <tr><td>GPU HBM</td><td data-label="Access scale">≈nanoseconds</td><td data-label="Contents">Active weights, KV blocks, activations, and execution buffers.</td><td data-label="Design question">How much remains after weights, fragmentation, and runtime reserve for live KV?</td></tr>
+      </tbody>
+    </table>
+    <p class="source-note">Latency labels are order-of-magnitude orientation, not Nutanix product benchmarks. Throughput figures (≈10–20 GB/s per Files node, ≈14 GB/s for a four-node Objects cluster) come from Nutanix Unified Storage and Objects benchmark material, not from LLM load tests. Device, protocol, queue depth, transfer size, topology, and cache state can move observed values materially.</p>
+    <p>The hierarchy follows temperature and sharing semantics: <strong>Objects</strong> is cold and durable, the place bytes arrive and are kept. <strong>Files</strong> is warm and shared, the repository every replica mounts. <strong>Host RAM and NVMe</strong> are local spill and cache tiers. <strong>HBM</strong> is the serving tier.</p>
+
+    <h3 class="subhead">Control loops, warm capacity, and two workload envelopes</h3>
+    <p>Autoscaling happens at two levels, and on Nutanix today they behave differently. At the <strong>endpoint level</strong>, NAI supports manual scaling of endpoint instances without downtime and <strong>hibernation</strong>, which releases an endpoint's GPUs and resumes it later. Knative scale-to-zero is explicitly disabled in the supported configuration, because a scale-from-zero event is a full cold start. Metric-driven autoscaling (HPA and KEDA on Prometheus signals) exists in Nutanix's KServe codebase but is not a standard NAI 2.8 feature. At the <strong>node level</strong>, the NKP cluster autoscaler can add GPU worker VMs when pods are pending, but it cannot create GPUs: it succeeds only if COCI and AHV have compatible free GPUs, images, and licenses.</p>
+    <p>In either case, a new pod is not useful merely because it is scheduled. It may still need minutes to read hundreds of gigabytes from Files and load HBM. A <strong>warm pool</strong> of already-loaded endpoint instances is the shock absorber between a fast scaling decision and a slow physical cold start. Hibernation is the tool for the opposite case: releasing capacity for endpoints whose users can tolerate a resume delay.</p>
+    <p><strong>etcd belongs to the control plane, not the data plane.</strong> It holds small desired-state facts and pointers—such as “production → model v2,” replica counts, and routing rules. It should never hold weight blobs, chat history, or KV-cache payloads. Inference workers stay replaceable; durable bytes live in Objects or Files according to their access pattern.</p>
+    <p>That same separation supports two operating envelopes: AHV VMs for stateful or infrastructure-adjacent services, and NKP containers for elastic GPU inference. Across locations, NAI provides a consistent serving layer on NKP on-premises and on supported public-cloud Kubernetes (EKS, AKS, GKE): keep governed data and models on-premises, and burst eligible workloads when placement policy permits.</p>
+    <blockquote class="pull">Objects → Files → HBM is the cold path. NVLink → east-west fabric is the execution path. Astra and COCI make GPUs exist; NKP schedules them; NAI turns them into endpoints; Prism Central shows the fleet.</blockquote>
+  </section>
+
+  <section id="gpu-farm">
+    <h2>Field notes: our own GPU Farm</h2>
+    <p class="lede">Nutanix already runs this stack for its own engineers, and the results match the arithmetic in this guide.</p>
+    <p>Internal IT operates a GPU Farm that serves Token-as-a-Service (TaaS) to Nutanix developers, mostly for coding agents running in editors and terminals, plus chat, RAG, embeddings, and reranking. A developer requests a key from an internal token portal, which calls NAI to mint it. From then on, the NAI gateway handles authentication, model authorization, quotas, rate limits, routing, and token accounting. The client never learns which GPU, node, or replica served it.</p>
+    <dl class="metric-row">
+      <div class="metric"><dt>96 × RTX PRO 6000</dt><dd>Blackwell Server Edition, 8 per node across 12 nodes. 96 GB GDDR7 each, PCIe Gen5, no NVLink.</dd></div>
+      <div class="metric"><dt>≈42B tokens / week</dt><dd>42.19B tokens generated per week, ≈6B per day, in the TaaS report dated September 25, 2026.</dd></div>
+      <div class="metric"><dt>619 onboarded users</dt><dd>Up 62% from the previous report, with planning for ≈1,500 and later ≈3,000 developers.</dd></div>
+    </dl>
+    <p>The serving path of record is bare-metal Ubuntu under <strong>NKP</strong>, with <strong>NAI</strong> (KServe and vLLM) serving models and <strong>Nutanix Files</strong> as the shared model store. Astra validation on the same RTX 6000-class hardware completed in September 2026, and the farm is moving onto Astra-managed infrastructure. HGX B300 nodes are planned next. The lessons so far map directly onto earlier sections:</p>
+    <ol class="numbered">
+      <li><div><b>Capacity is cheap; interconnect is not.</b> A 96 GB card holds a lot of model, which makes RTX PRO 6000 an economical way to serve single-GPU MoE models. But without NVLink, tensor parallelism across cards pushes every all-reduce and KV movement over PCIe, which materially hurts inter-token latency for 30B–120B-class models. This is the "interconnect column" from the GPU table, observed in production.</div></li>
+      <li><div><b>MoE plus one GPU is the sweet spot.</b> gpt-oss-120b fits on one card in native MXFP4. For the agent platform, the team chose Qwen3.6-35B-A3B on a single RTX PRO 6000: ≈3B active parameters give a high decode ceiling, and no tensor parallelism means no PCIe collective penalty.</div></li>
+      <li><div><b>Benchmark quality isn't agent compatibility.</b> gpt-oss-120b was acceptable for general coding help but did not reliably produce the tool calls the agent workflow required. Model selection is a functional test before it is a sizing exercise.</div></li>
+      <li><div><b>Sizing needs a real sizer.</b> GPU type and count, KV budget, TP/PP layout, NCCL settings, and container arguments have to be chosen together. NAI's automatic resource calculation covers validated combinations; beyond that, the review recommends NVIDIA's validated configurations and the NAI Sizer.</div></li>
+      <li><div><b>Design observability and attribution early.</b> Token volume was easy to count. Per-user, team, and model attribution, queue depth, TTFT, TPOT, and showback took longer. The first TaaS report still could not attribute most of its workload.</div></li>
+      <li><div><b>Multi-tenancy is engineering work.</b> Open items include GPU-memory wiping between tenants, KServe tenant isolation, node re-imaging, model approval, and scoped tokens. These are exactly the problems Astra's projects, resource groups, and fabric isolation are built to solve.</div></li>
+    </ol>
+    <p class="source-note">Figures come from internal GPU Farm, TaaS, and Astra project pages as of late September 2026. Internal records differ on Astra go-live status and on whether the inventory is 90 or 96 GPUs; the figures above use the most recent farm-of-record pages. Confirm before quoting externally.</p>
+  </section>
+
+  <section id="operations">
+    <h2>Scaling, ownership, and failure modes</h2>
+    <p class="lede">Autoscaling must react before users see a queue, but inference capacity can take tens of seconds or minutes to become usable.</p>
+    <p>A controller that observes only GPU utilization is late and sometimes wrong: decode can be bandwidth-bound while utilization looks moderate, and a queue can rise while new replicas are still loading. Use a small set of leading and confirming signals, and require a model-level readiness gate before routing traffic.</p>
+    <table class="decision-table" aria-label="Autoscaling signals and actions">
+      <thead><tr><th>Signal</th><th>Interpretation</th><th>Action</th><th>Where it runs</th></tr></thead>
+      <tbody>
+        <tr><td>Queue depth / oldest request age</td><td data-label="Interpretation">Demand is exceeding admitted service capacity now.</td><td data-label="Action">Route to ready headroom; add or resume endpoint instances; shed work with gateway rate limits if the SLO cannot be protected.</td><td data-label="Where">NAI Agent Gateway plus NAI endpoint scaling</td></tr>
+        <tr><td>p99 TTFT</td><td data-label="Interpretation">Queueing, prefill saturation, cache misses, or a degraded replica is reaching users.</td><td data-label="Action">Check KV-aware routing hit rate, add instances, or isolate the slow replica after phase-level diagnosis.</td><td data-label="Where">NAI endpoint metrics (Prometheus / OpenTelemetry)</td></tr>
+        <tr><td>Decode TPS / TPOT</td><td data-label="Interpretation">Per-request generation speed is falling.</td><td data-label="Action">Reduce batch pressure, add instances, or investigate memory-bandwidth or PCIe/fabric contention.</td><td data-label="Where">NAI endpoint metrics</td></tr>
+        <tr><td>HBM allocated / live KV tokens</td><td data-label="Interpretation">The replica is approaching its safe concurrency envelope.</td><td data-label="Action">Stop admission to that replica, cap context, enable KV offload where supported, or add instances before OOM.</td><td data-label="Where">vLLM metrics and the endpoint picker (EPP)</td></tr>
+        <tr><td>GPU utilization</td><td data-label="Interpretation">Useful corroboration, but not a user SLO and not proof of decode efficiency.</td><td data-label="Action">Use with queue, throughput, and bandwidth counters; never scale on it alone.</td><td data-label="Where">DCGM exporter via the NKP GPU Operator</td></tr>
+        <tr><td>Ready instances minus demand</td><td data-label="Interpretation">Warm-pool margin is shrinking before a spike or rollout.</td><td data-label="Action">Resume hibernated endpoints or add instances ahead of traffic; confirm free GPUs exist in COCI before promising capacity.</td><td data-label="Where">NAI endpoint lifecycle plus NKP node pools</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="subhead">Failure modes worth designing before launch</h3>
+    <div class="stack">
+      <div class="stack-row"><b>HBM OOM during long-context prefill</b><p><strong>Infra implication:</strong> enforce per-request context and per-replica live-token limits at admission; monitor KV allocation, not only request count.</p></div>
+      <div class="stack-row"><b>NCCL or collective timeout</b><p><strong>Infra implication:</strong> a tensor-parallel replica is one synchronous failure domain; capture rank-level timing and drain the entire replica when one participant degrades.</p></div>
+      <div class="stack-row"><b>Tensor-parallel straggler</b><p><strong>Infra implication:</strong> a single slow GPU, NUMA path, or link stretches every collective; topology-aware placement and per-rank telemetry are required.</p></div>
+      <div class="stack-row"><b>Noisy neighbor on the shared fabric</b><p><strong>Infra implication:</strong> collective and KV-transfer traffic need measurable capacity, isolation, and maintenance coordination with other east-west workloads.</p></div>
+      <div class="stack-row"><b>etcd quorum loss</b><p><strong>Infra implication:</strong> existing workers may continue serving, but desired-state changes and rollouts can freeze; keep payloads out of etcd and test control-plane recovery separately.</p></div>
+      <div class="stack-row"><b>Thundering-herd cold start</b><p><strong>Infra implication:</strong> a deploy or node loss can make many replicas read the same hundreds of gigabytes from one Files share at once; use warm capacity, staged rollout waves, optional LocalModelCache, and measured Files throughput limits.</p></div>
+      <div class="stack-row"><b>Host RAM exhaustion from KV offload</b><p><strong>Infra implication:</strong> the <code>/dev/shm</code> KV tier counts against pod memory; size nodes and pod limits for ≥1.2× GPU memory per GPU, or the offload feature becomes an OOM source.</p></div>
+      <div class="stack-row"><b>No free GPU behind the autoscaler</b><p><strong>Infra implication:</strong> an NKP node-pool scale-up stalls if COCI has no compatible free GPU node; capacity reservations and tenant GPU quotas belong in Astra resource-group planning, not in the autoscaler.</p></div>
+      <div class="stack-row"><b>Partial model hydration</b><p><strong>Infra implication:</strong> never advertise readiness after the container starts; require digest verification, complete HBM load, distributed-group formation, and an inference health check.</p></div>
+      <div class="stack-row"><b>Node drain crosses the SLO margin</b><p><strong>Infra implication:</strong> maintenance capacity is part of steady-state sizing. A replica that spans nodes may disappear as a unit when one node drains.</p></div>
+    </div>
+    <p>The operational test is not “Can Kubernetes restart it?” It is “Can the fleet replace this replica, move its bytes, reform its communication group, and absorb traffic without violating the user-facing SLO?”</p>
+  </section>
+
+  <section id="artifacts">
+    <h2>Artifacts: what training leaves behind</h2>
+    <p>A trained model is not one file. A typical release directory includes architecture and generation configuration, tokenizer assets, documentation, and weight shards. A simplified layout looks like this:</p>
+    <div class="file-tree" aria-label="Example model artifact directory"><span class="root">model-v2/</span><br>├── config.json <span class="note"># architecture and dimensions</span><br>├── generation_config.json <span class="note"># decoding defaults</span><br>├── model-00001-of-000xx.safetensors<br>├── model.safetensors.index.json <span class="note"># shard map</span><br>├── tokenizer.json / tokenizer_config.json<br>├── special_tokens_map.json<br>└── README.md <span class="note"># model card and usage notes</span></div>
+    <p>Training checkpoints are larger still. Besides one copy of the weights, Adam-family optimization commonly maintains first- and second-moment state—roughly two additional model-sized sets—plus scheduler and random-number-generator state. The shorthand is <strong>≈1× weights + ≈2× optimizer state</strong>, before format and precision details. Checkpoint storage can therefore dwarf the final serving artifact.</p>
+    <p><strong>LoRA adapters</strong> take the opposite approach: keep a frozen base model and store small learned matrices per task. The adapter is cheap to copy and promote, but it is meaningful only alongside the exact compatible base model.</p>
+    <p>Serving then creates its own artifacts. Chat history is application state. Prefix-cache snapshots or reusable KV blocks are performance state. Logs, traces, evaluation outputs, and safety records are operational state. “Stateless inference” usually means the worker can be replaced—not that the surrounding system has no state.</p>
+    <table class="decision-table" aria-label="Inference artifact lifecycle">
+      <thead><tr><th>Artifact</th><th>Producer</th><th>Consumer</th><th>Storage tier</th><th>Retention policy</th></tr></thead>
+      <tbody>
+        <tr><td>Weight shards</td><td data-label="Producer">Training / conversion pipeline</td><td data-label="Consumer">Model loader and serving workers</td><td data-label="Storage tier">Objects (durable copy) → Files RWX PVC (live) → HBM</td><td data-label="Retention">Immutable, versioned; retain every approved release and rollback target in Objects even after the Files volume is deleted.</td></tr>
+        <tr><td>Configs + tokenizer</td><td data-label="Producer">Training / packaging pipeline</td><td data-label="Consumer">Loader, gateway, evaluators, and clients</td><td data-label="Storage tier">Alongside the matching weights, in both Objects and the model's Files volume</td><td data-label="Retention">Version-lock to the model digest; never promote independently by accident.</td></tr>
+        <tr><td>Training checkpoints</td><td data-label="Producer">Trainer</td><td data-label="Consumer">Resume, recovery, and analysis jobs; NAI fine-tuning pause/resume</td><td data-label="Storage tier">Files during active training bursts; Objects for retention</td><td data-label="Retention">Keep recovery milestones; expire dense intermediate steps after the recovery window.</td></tr>
+        <tr><td>LoRA adapters</td><td data-label="Producer">Fine-tuning pipeline</td><td data-label="Consumer">Adapter-aware serving workers</td><td data-label="Storage tier">Objects</td><td data-label="Retention">Version with an explicit base-model dependency; retain approved and rollback versions.</td></tr>
+        <tr><td>Prefix-cache snapshots</td><td data-label="Producer">Serving or cache-management layer</td><td data-label="Consumer">Compatible serving workers</td><td data-label="Storage tier">Hot local NVMe; Objects only when durable reuse is worth load cost</td><td data-label="Retention">Short TTL; invalidate on model, tokenizer, template, or cache-format change.</td></tr>
+        <tr><td>Chat history</td><td data-label="Producer">Application layer</td><td data-label="Consumer">Application and prompt assembler</td><td data-label="Storage tier">Objects for durable records; Files only for approved shared exports</td><td data-label="Retention">Defined by application, privacy, and audit requirements—not by model-server cache policy.</td></tr>
+        <tr><td>Logs, traces, eval outputs</td><td data-label="Producer">Gateway, platform, and model workers</td><td data-label="Consumer">Operators, evaluators, and audit workflows</td><td data-label="Storage tier">Objects; selected shared reports on Files</td><td data-label="Retention">Tier by diagnostic and compliance value; redact or exclude sensitive prompt content.</td></tr>
+      </tbody>
+    </table>
+    <p>The clean promotion pattern is to keep each model build immutable in Objects, import each approved version into its own Files volume, and move a small mutable pointer in the control plane. Promotion becomes a metadata flip from one versioned artifact to another; rollback is the reverse flip. Workers resolve the pointer, mount the referenced volume, load it, pass health checks, and only then take traffic. Never overwrite a model volume that a live endpoint may still be reading.</p>
+  </section>
+
+  <section id="files-objects">
+    <h2>Files vs Objects: the one rule</h2>
+    <div class="rules">
+      <article class="rule"><h3>Nutanix Files</h3><span class="mode">SMB / NFS · mounted hierarchy · RWX PVC</span><p>Files supports folders, in-place edits, byte-range locking, and many readers or writers sharing a POSIX mount. That is exactly what a fleet of vLLM pods needs to read the same model, which is why NAI puts live weights here. NFS over RDMA and the AI Performance Profile make it the fast path.</p></article>
+      <article class="rule"><h3>Nutanix Objects</h3><span class="mode">S3 API · buckets and keys</span><p>Objects fits write-once/read-many blobs addressed over HTTPS at data-lake scale. Versioning, lifecycle policy, and replication make it the durable registry for imports, corpora, checkpoints, and archives, while application logic owns concurrency.</p></article>
+    </div>
+    <blockquote class="pull">If your app speaks S3, it wants Objects. If pods, people, or tools need a shared mounted filesystem—including every NAI replica reading its weights—it wants Files.</blockquote>
+    <div class="placement">Durable imports in Objects · live weights on Files · spilled KV in host RAM · hot state in HBM · pointers in etcd</div>
+  </section>
+
+  <section id="capacity">
+    <h2>Capacity-planning checklist</h2>
+    <p class="lede">A defensible deployment plan can be reviewed as eight linked calculations. If one input is unknown, mark it as a measurement task rather than filling the gap with a vendor peak number.</p>
+    <ol class="numbered">
+      <li><div><b>Choose the exact model build.</b> Record architecture, total and active parameters, precision, context limit, attention design, license, weight format, and immutable artifact digest. “405B” is not enough if one build is BF16 and another FP8.</div></li>
+      <li><div><b>Compute the resident weight footprint.</b> Multiply parameters by bytes per parameter, then add measured runtime reserve for graph state, kernels, temporary buffers, and fragmentation. Round to a supported GPU topology—not merely the mathematical minimum. Start from NAI's validated model–GPU matrix and automatic resource calculation where the combination is listed.</div></li>
+      <li><div><b>Budget KV cache from context × concurrency.</b> Calculate bytes per token from the architecture, then multiply by the maximum admitted live tokens per replica. State context limits and the scheduling policy that enforces them.</div></li>
+      <li><div><b>Select GPU and node count.</b> Fit weights + KV + reserve into usable HBM. Prefer the fewest high-bandwidth domains that meet latency; record the spare capacity required for maintenance and failover. Check both memory capacity and the bandwidth-derived decode ceiling, and note whether the SKU has NVLink.</div></li>
+      <li><div><b>Validate the fabric.</b> Map tensor, pipeline, expert, and KV-transfer traffic onto actual links. Benchmark the intended topology under contention, and identify every synchronous failure domain.</div></li>
+      <li><div><b>Size storage and the cold path.</b> Budget durable capacity for weights, checkpoints, adapters, snapshots, and retention copies. Divide rollout bytes by required rollout time to derive aggregate Files read throughput; include concurrent loads. Budget Objects for the durable copy of every retained version, and host RAM for KV offload if enabled.</div></li>
+      <li><div><b>Reserve power and cooling.</b> Use node-level maximum envelopes plus switching, storage, and facility overhead. Check rack density, power feeds, cooling, and maintenance capacity before treating GPU inventory as deployable.</div></li>
+      <li><div><b>Set the warm-pool and rollout policy.</b> Compare demand growth and failure-recovery objectives with measured hydrate-and-initialize time. Pre-stage enough ready capacity to cover that gap, then canary, health-gate, and roll forward in bounded waves. Decide which endpoints stay warm and which may hibernate, and confirm the free GPU nodes in COCI that a scale-up would rely on.</div></li>
+    </ol>
+    <table class="decision-table" aria-label="Capacity planning outputs">
+      <thead><tr><th>Review output</th><th>Question it must answer</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Replica shape</td><td data-label="Question">How many GPUs and nodes form one failure domain?</td><td data-label="Evidence">Weight + KV calculation and topology benchmark.</td></tr>
+        <tr><td>Fleet size</td><td data-label="Question">How many ready replicas satisfy peak load at the target utilization and p99?</td><td data-label="Evidence">Request-shape distribution and end-to-end load test.</td></tr>
+        <tr><td>Recovery margin</td><td data-label="Question">What demand survives one replica, node, or rack loss?</td><td data-label="Evidence">Failure injection and capacity held outside the failed domain.</td></tr>
+        <tr><td>Rollout envelope</td><td data-label="Question">How many replicas can hydrate simultaneously without starving production?</td><td data-label="Evidence">Measured Files → HBM load time per replica, and aggregate Files throughput with N replicas loading at once.</td></tr>
+        <tr><td>Facility envelope</td><td data-label="Question">Can the planned topology be powered and cooled continuously?</td><td data-label="Evidence">Node, network, and storage power budgets plus facility limits.</td></tr>
+      </tbody>
+    </table>
+    <blockquote class="pull">The final unit of capacity is not a GPU. It is a healthy replica, loaded with the right artifact, inside a tested failure domain, with enough HBM and fabric headroom to meet the SLO.</blockquote>
+  </section>
+
+  <section id="together">
+    <h2>Putting it together: one operating model</h2>
+    <p>Follow one request from a coding agent. It reaches the <strong>NAI Agent Gateway</strong>, where Envoy checks the API key and quota, and the llm-d endpoint picker chooses the replica most likely to hold the conversation's prefix in its KV cache. <strong>KServe</strong> runs that replica as a vLLM pod on an <strong>NKP</strong> GPU node pool, inside an <strong>AHV</strong> VM with a passed-through GPU, on a compute-only node managed by <strong>COCI</strong>. Prefill builds KV state; decode streams tokens back through the gateway. Today both phases run in one replica; the target design splits them into separately scaled pools. The weights that replica reads were imported once from <strong>Objects</strong> (or Hugging Face or NGC) into a <strong>Files</strong> RWX volume and loaded into HBM when the endpoint started. Cold KV blocks spill to host RAM. <strong>Astra</strong> brought the GPU node into existence, and <strong>Prism Central</strong> shows it in the fleet.</p>
+    <div class="pipeline" aria-label="Reference inference architecture">
+      <svg viewBox="0 0 720 352" role="img" aria-labelledby="rt rd"><title id="rt">Reference inference architecture on Nutanix</title><desc id="rd">A request flows through the NAI Agent Gateway to prefill and decode on NKP-managed GPU nodes. Models are imported from Objects into a Files read-write-many volume and loaded into GPU memory. KV cache spills to host RAM. etcd holds pointers, and Project Astra, COCI, and Prism Central manage the GPU fleet.</desc><defs><marker id="arrow2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <rect x="18" y="45" width="84" height="58" rx="8" class="s-box"/><text x="60" y="79" text-anchor="middle" class="s-title">Agent</text>
+        <rect x="126" y="36" width="136" height="76" rx="8" class="s-good"/><text x="194" y="66" text-anchor="middle" class="s-title">Agent Gateway</text><text x="194" y="86" text-anchor="middle" class="s-small">Envoy · EPP</text>
+        <rect x="284" y="24" width="132" height="100" rx="8" class="s-main"/><text x="350" y="61" text-anchor="middle" class="s-title">Prefill</text><text x="350" y="84" text-anchor="middle" class="s-small">vLLM · compute</text><text x="350" y="104" text-anchor="middle" class="s-small">NKP GPU pool</text>
+        <rect x="454" y="24" width="132" height="100" rx="8" class="s-main"/><text x="520" y="61" text-anchor="middle" class="s-title">Decode</text><text x="520" y="84" text-anchor="middle" class="s-small">vLLM · bandwidth</text><text x="520" y="104" text-anchor="middle" class="s-small">NKP GPU pool</text>
+        <rect x="620" y="45" width="82" height="58" rx="8" class="s-good"/><text x="661" y="79" text-anchor="middle" class="s-title">Tokens</text>
+        <path d="M102 74H118" class="s-line" marker-end="url(#arrow2)"/><path d="M262 74H276" class="s-line" marker-end="url(#arrow2)"/><path d="M416 74H446" class="s-line" marker-end="url(#arrow2)"/><path d="M586 74H612" class="s-line" marker-end="url(#arrow2)"/><text x="435" y="58" text-anchor="middle" class="s-small">KV</text>
+        <rect x="18" y="184" width="116" height="62" rx="8" class="s-good"/><text x="76" y="210" text-anchor="middle" class="s-title">Objects</text><text x="76" y="229" text-anchor="middle" class="s-small">durable imports</text>
+        <rect x="168" y="184" width="130" height="62" rx="8" class="s-good"/><text x="233" y="210" text-anchor="middle" class="s-title">Files · RWX</text><text x="233" y="229" text-anchor="middle" class="s-small">live weights</text>
+        <rect x="332" y="184" width="116" height="62" rx="8" class="s-main"/><text x="390" y="210" text-anchor="middle" class="s-title">GPU HBM</text><text x="390" y="229" text-anchor="middle" class="s-small">weights + KV</text>
+        <rect x="482" y="184" width="104" height="62" rx="8" class="s-box"/><text x="534" y="210" text-anchor="middle" class="s-title">Host RAM</text><text x="534" y="229" text-anchor="middle" class="s-small">KV offload</text>
+        <path d="M134 215H160" class="s-line" marker-end="url(#arrow2)"/><path d="M298 215H324" class="s-line" marker-end="url(#arrow2)"/><path d="M448 215H474" class="s-line" marker-end="url(#arrow2)"/><path d="M390 184V132" class="s-line" marker-end="url(#arrow2)"/>
+        <rect x="604" y="184" width="98" height="62" rx="8" class="s-box"/><text x="653" y="210" text-anchor="middle" class="s-title">etcd</text><text x="653" y="229" text-anchor="middle" class="s-small">pointers only</text>
+        <rect x="18" y="272" width="684" height="46" rx="8" class="s-good"/><text x="360" y="292" text-anchor="middle" class="s-title">Astra · COCI · AHV · Flow · Prism Central</text><text x="360" y="310" text-anchor="middle" class="s-small">GPU nodes exist, are isolated per tenant, and are visible as one fleet</text>
+        <text x="360" y="342" text-anchor="middle" class="s-small">Each tier has one job; none is a universal bucket.</text>
+      </svg>
+    </div>
+    <p>Warm endpoint instances keep sudden demand off the cold-start path, and hibernation releases GPUs from endpoints that can tolerate a resume delay. AHV-hosted ancillary services and NKP-managed inference pools share the same Nutanix Unified Storage and observability foundation, while policy decides whether eligible overflow stays on-premises or runs on NAI in a public cloud.</p>
+  </section>
+
+  <section id="thesis">
+    <h2>Inference engineering is infrastructure engineering</h2>
+    <p class="lede">Choosing a model is choosing the physical shape of the service.</p>
+    <div class="thesis-chain"><span>parameter count</span> → GPU count → node count → NVLink domains → inter-node fabric → power, cooling &amp; floor space</div>
+    <div class="thesis-grid">
+      <article><b>≤≈20.4 kW</b><p>Maximum whole-system IT load across two occupied DGX H100-class nodes; cooling/PUE is additional.</p></article>
+      <article><b>≈1 TB</b><p>Kimi K2 FP8 weight data read from Files into HBM for every replica load.</p></article>
+      <article><b>≈512 GB</b><p>KV cache for eight ≈128K-token Llama 405B sessions at the ≈500 KB/token planning value.</p></article>
+    </div>
+    <p>That is the core argument. Cold start is a storage and network throughput problem. Expert parallelism is a fabric problem. Long context multiplied by concurrency is an HBM capacity problem. Replica density is a power, cooling, and scheduling problem. Multi-tenancy is a fabric-isolation and control-plane problem. The runtime exposes these pressures; infrastructure determines whether the service survives them.</p>
+    <p>That is also why Nutanix's AI strategy is layered the way it is. NAI alone cannot fix a missing NVLink domain, a saturated Files share, or a GPU node that was never imaged. Astra, COCI, AHV, NKP, Flow, Files, and Objects exist so that when NAI asks for "one more replica of this model," the answer is a healthy endpoint rather than a ticket.</p>
+  </section>
+
+  <section id="next">
+    <h2>Discussion questions</h2>
+    <p>The presentation will start with the GPT-2 script, the request path, and the roofline mental model. It then moves into GPU memory, bandwidth, and failure-domain math, traces model bytes from Objects through Files to HBM, and shows where Astra, COCI, AHV, NKP, NAI, Flow, and the network fabric enter the operating picture. Part 1 and Part 3 of the companion series provide the deeper visual references; Part 2 remains the runtime-optimization follow-up.</p>
+    <div class="question"><b>1 · CAPACITY</b>Which model footprint can our current cluster host with measured operational headroom after weights, KV cache, one failure domain, and maintenance reserve—not just nominal aggregate HBM?</div>
+    <div class="question"><b>2 · BOTTLENECK</b>For that footprint, what becomes limiting first under the target request distribution: HBM capacity, HBM bandwidth, the inter-node fabric, storage hydration throughput, or facility power?</div>
+    <div class="question"><b>3 · RECOVERY</b>After a node loss or model rollout, how many replicas can hydrate concurrently, how long until they pass model-level health checks, and what warm capacity protects p99 TTFT during that interval?</div>
+    <div class="question"><b>4 · PLATFORM</b>The GPU Farm shows that PCIe-only GPUs favor single-GPU MoE models. For the next model we plan to offer through NAI, should the Astra hardware plan buy capacity (more RTX PRO 6000) or interconnect (HGX B300 with NVLink), and which NAI Tech Preview features—multi-node, KV-aware routing, KV offload—does that choice depend on?</div>
+  </section>
+
+  <section id="glossary">
+    <h2>Small glossary</h2>
+    <dl class="glossary">
+      <div><dt>Prefill</dt><dd>Parallel processing of the input prompt that builds initial attention state.</dd></div>
+      <div><dt>Decode</dt><dd>The serial loop that generates one token at a time.</dd></div>
+      <div><dt>TTFT</dt><dd>Time to first token: queueing plus prefill latency as the user experiences it.</dd></div>
+      <div><dt>TPS / ITL</dt><dd>Tokens per second, or inter-token latency, during decode.</dd></div>
+      <div><dt>Roofline model</dt><dd>A performance model that relates arithmetic intensity to the ceilings imposed by memory bandwidth and peak compute.</dd></div>
+      <div><dt>Serving framework</dt><dd>The service layer that queues, batches, schedules, and executes model requests on accelerators.</dd></div>
+      <div><dt>KV cache</dt><dd>Stored key/value projections of prior tokens, reused by later decode steps.</dd></div>
+      <div><dt>Quantization</dt><dd>Representing weights or activations with fewer bits to reduce memory and traffic.</dd></div>
+      <div><dt>Tensor parallelism</dt><dd>Splitting a layer’s tensor operations across tightly connected accelerators.</dd></div>
+      <div><dt>MoE</dt><dd>Mixture-of-Experts: sparse layers that route each token to a subset of expert MLPs.</dd></div>
+      <div><dt>Speculative decoding</dt><dd>Drafting tokens with a small model and verifying them in parallel with a larger one.</dd></div>
+      <div><dt>Cold start</dt><dd>The path from an unavailable replica to one with initialized weights ready in HBM.</dd></div>
+      <div><dt>LoRA</dt><dd>Small task-specific low-rank adapter weights applied to a frozen base model.</dd></div>
+      <div><dt>SafeTensors</dt><dd>A tensor serialization format commonly used for sharded model weights.</dd></div>
+      <div><dt>Disaggregation</dt><dd>Running prefill and decode on separately sized worker pools.</dd></div>
+      <div><dt>Warm pool</dt><dd>Ready, already-loaded inference capacity held to absorb demand without waiting for a full model cold start.</dd></div>
+      <div><dt>SM</dt><dd>Streaming multiprocessor: the GPU execution unit that contains CUDA and Tensor Cores.</dd></div>
+      <div><dt>HBM</dt><dd>High-bandwidth memory attached to the accelerator; the capacity pool that must hold weights, caches, and runtime overhead.</dd></div>
+      <div><dt>GQA / MLA</dt><dd>Attention designs that reduce KV-cache size by storing fewer or compressed key/value channels.</dd></div>
+      <div><dt>Expert parallelism</dt><dd>Distributing MoE experts across accelerators; token routing then becomes a fabric operation.</dd></div>
+      <div><dt>Pipeline parallelism</dt><dd>Assigning consecutive model-layer stages to different accelerators and passing activations between them.</dd></div>
+      <div><dt>Data parallelism</dt><dd>Running complete model replicas that independently serve different requests.</dd></div>
+      <div><dt>Collective</dt><dd>A coordinated multi-rank communication operation such as all-reduce or all-to-all.</dd></div>
+      <div><dt>Live tokens</dt><dd>The prompt and generated tokens currently occupying KV-cache capacity across admitted sequences.</dd></div>
+      <div><dt>Ridge point</dt><dd>The roofline balance where the bandwidth slope meets the compute ceiling.</dd></div>
+      <div><dt>NVLink domain</dt><dd>The set of GPUs joined by NVIDIA’s high-bandwidth accelerator interconnect, typically inside one server.</dd></div>
+      <div><dt>etcd</dt><dd>A consistent control-plane key-value store for small cluster state and pointers—not blobs.</dd></div>
+      <div><dt>TPOT</dt><dd>Time per output token; NAI's name for inter-token latency during decode.</dd></div>
+      <div><dt>NAI</dt><dd>Nutanix Enterprise AI: the Kubernetes-native platform that deploys, governs, and serves model endpoints through KServe, vLLM, and NVIDIA NIM.</dd></div>
+      <div><dt>Agent Gateway</dt><dd>NAI's Envoy-based front door for local endpoints, external providers, and MCP servers: auth, routing, rate limits, and telemetry.</dd></div>
+      <div><dt>EPP</dt><dd>Endpoint picker from the Gateway API Inference Extension; in NAI, the llm-d scheduler that picks replicas by KV-cache prefix match and load.</dd></div>
+      <div><dt>NKP</dt><dd>Nutanix Kubernetes Platform: management and workload clusters, GPU node pools, and the NVIDIA GPU Operator.</dd></div>
+      <div><dt>Project Astra</dt><dd>Nutanix's AI Factory program that turns GPU servers into tenant-aware GPU, Kubernetes, and inference services.</dd></div>
+      <div><dt>COCI</dt><dd>Centralized Operations for Cluster Infrastructure: a lightweight control plane for up to ≈128 compute-only GPU nodes, with no HCI data path.</dd></div>
+      <div><dt>CCVS</dt><dd>Cross-Cluster Volume Storage: exports VM boot volumes over iSCSI from an infrastructure cluster to GPU nodes.</dd></div>
+      <div><dt>Foundation Central / Nico / NIM</dt><dd>Astra's hardware path: imaging and lifecycle, provisioning via BMC/Redfish and health tests, and infrastructure orchestration (NIM here is Nutanix's infrastructure manager, not NVIDIA NIM).</dd></div>
+      <div><dt>NVIDIA NIM</dt><dd>NVIDIA Inference Microservices: prebuilt, optimized model-serving containers that NAI can deploy as endpoints.</dd></div>
+      <div><dt>KServe / LLMInferenceService</dt><dd>The Kubernetes serving layer under NAI; LLMInferenceService with LeaderWorkerSet enables multi-node serving.</dd></div>
+      <div><dt>RWX PVC</dt><dd>A ReadWriteMany Kubernetes volume; in NAI, one per model on a Nutanix Files share, mounted by every replica.</dd></div>
+      <div><dt>NFS over RDMA / GDS</dt><dd>Faster storage paths: NFS carried over RDMA NICs, and GPUDirect Storage reading straight into GPU memory.</dd></div>
+      <div><dt>MIG / vGPU</dt><dd>Ways to share one physical GPU: hardware partitions with isolated memory, or hypervisor-level virtual GPUs.</dd></div>
+      <div><dt>SR-IOV</dt><dd>A NIC exposing hardware virtual functions directly to VMs, bypassing the AHV virtual switch for RDMA traffic.</dd></div>
+      <div><dt>Hibernation</dt><dd>An NAI endpoint state that releases GPUs without deleting the endpoint; resuming is a cold start.</dd></div>
+    </dl>
+    <p class="source-note"><strong>Nutanix sources, checked September 28, 2026 (internal):</strong> NAI 2.8 Release Highlights and Technical FAQ · NAI Architecture onboarding guide · RA-2189 Agentic AI Factory Reference Architecture (draft) · FEAT-19395 Cluster Control Plane (COCI) design · Astra 1.0 design documents and end-to-end workflow sessions · "19 – AI Storage and KV Cache Offloading" · NUS and Objects performance material · GPU Farm, TaaS Phase 3, and Astra–IT RTX6000 pages. Tech Preview and roadmap items are labeled as such; confirm current status before external use.</p>
+  </section>
+</main>
+<footer>
+  <div class="shell">
+    <strong>Companion visual guides</strong>
+    <div class="guides" aria-label="Companion guide titles">
+      <div class="guide"><b>Part 1</b> · Foundations &amp; Hardware<span class="slug">inference-engineering-diagrams-part-1</span></div>
+      <div class="guide"><b>Part 2</b> · Optimization &amp; Production<span class="slug">inference-engineering-diagrams-part-2</span></div>
+      <div class="guide"><b>Part 3</b> · Nutanix in the Inference Stack<span class="slug">inference-engineering-diagrams-part-3</span></div>
+      <div class="guide"><b>Part 4</b> · Artifacts &amp; Storage<span class="slug">inference-engineering-artifacts-guide-part-4</span></div>
+    </div>
+    <p>Open these titles from the team’s Muse Spaces library. Public URLs were not embedded because the companion guides have not been shared as links.</p>
+    <p>Original post created for internal team education. Inference concepts from <cite>Inference Engineering</cite> by Philip Kiely (Baseten Books, 2026).</p>
+  </div>
+</footer>
+<script>
+  (function(){
+    var bar=document.querySelector('.progress');
+    function update(){var max=document.documentElement.scrollHeight-innerHeight;bar.style.width=(max>0?Math.min(100,scrollY/max*100):0)+'%';}
+    addEventListener('scroll',update,{passive:true});addEventListener('resize',update);update();
+  }());
+</script>
+</body>
+</html>
