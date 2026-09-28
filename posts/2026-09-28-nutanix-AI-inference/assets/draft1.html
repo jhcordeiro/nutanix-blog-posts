@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <title>Inference Engineering Is Infrastructure Engineering</title>
+  <style>
+    :root{
+      --bg:#fafafa;--paper:#ffffff;--ink:#172033;--text:#334155;--muted:#64748b;
+      --line:#d8dee8;--soft:#f1f5f9;--indigo:#4f46e5;--indigo-soft:#eef2ff;
+      --green:#047857;--green-soft:#ecfdf5;--amber:#b45309;--amber-soft:#fffbeb;
+      --code:#111827;--code-text:#e5e7eb;--shadow:0 8px 28px rgba(15,23,42,.06)
+    }
+    @media(prefers-color-scheme:dark){:root{
+      --bg:#0b1020;--paper:#121a2b;--ink:#f8fafc;--text:#dbe3ef;--muted:#a8b5c8;
+      --line:#334155;--soft:#1e293b;--indigo:#818cf8;--indigo-soft:#25294a;
+      --green:#34d399;--green-soft:#0f352d;--amber:#fbbf24;--amber-soft:#3a2b12;
+      --code:#060b16;--code-text:#edf2f7;--shadow:0 10px 34px rgba(0,0,0,.22)
+    }}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;scroll-padding-top:24px}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:17px;line-height:1.72}
+    a{color:var(--indigo);text-underline-offset:3px}
+    .progress{position:fixed;z-index:20;inset:0 auto auto 0;height:3px;width:0;background:var(--indigo)}
+    .shell{width:min(100% - 40px,780px);margin-inline:auto}
+    header{padding:68px 0 36px;border-bottom:1px solid var(--line)}
+    .series{margin:0 0 14px;color:var(--indigo);font-size:.79rem;font-weight:780;letter-spacing:.09em;text-transform:uppercase}
+    h1{margin:0;color:var(--ink);font-size:clamp(2.45rem,7vw,4.85rem);line-height:.98;letter-spacing:-.055em;font-weight:780}
+    .dek{margin:24px 0 22px;max-width:720px;color:var(--text);font-size:clamp(1.08rem,2.2vw,1.35rem);line-height:1.5}
+    .meta{display:flex;flex-wrap:wrap;gap:7px 18px;color:var(--muted);font-size:.88rem}.meta span+span{position:relative}.meta span+span:before{content:"·";position:absolute;left:-11px}
+    .attribution{margin:25px 0 0;padding-top:18px;border-top:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+    .toc{margin:34px auto 16px;padding:23px 25px;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow)}
+    .toc h2{margin:0 0 13px;color:var(--ink);font-size:.92rem;letter-spacing:.04em}.toc ol{columns:2;column-gap:36px;margin:0;padding-left:22px}.toc li{break-inside:avoid;padding:3px 0}.toc a{color:var(--text);text-decoration:none;font-size:.93rem}.toc a:hover{text-decoration:underline;color:var(--indigo)}
+    main{padding:18px 0 62px}
+    section{padding:42px 0;border-bottom:1px solid var(--line)}
+    section:last-child{border-bottom:0}
+    h2{margin:0 0 20px;color:var(--ink);font-size:clamp(1.65rem,4vw,2.25rem);line-height:1.15;letter-spacing:-.025em}
+    h3{margin:28px 0 8px;color:var(--ink);font-size:1.13rem;line-height:1.3}
+    p{margin:0 0 18px}p:last-child{margin-bottom:0}
+    strong{color:var(--ink)}
+    .lede{font-size:1.12rem;color:var(--ink)}
+    .pull{margin:30px 0;padding:21px 0 21px 25px;border-left:4px solid var(--indigo);color:var(--ink);font-size:clamp(1.18rem,3vw,1.48rem);font-weight:700;line-height:1.45;letter-spacing:-.012em}
+    .phase-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:25px 0}.phase{padding:20px;background:var(--paper);border:1px solid var(--line)}.phase b{display:block;margin-bottom:4px;color:var(--indigo);font-size:.8rem;letter-spacing:.08em}.phase p{font-size:.94rem;margin:0}.phase.decode b{color:var(--green)}
+    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.metric{background:var(--paper);padding:16px}.metric dt{color:var(--ink);font-weight:800}.metric dd{margin:3px 0 0;color:var(--muted);font-size:.86rem;line-height:1.45}
+    .pipeline{margin:28px 0;padding:18px;background:var(--paper);border:1px solid var(--line);overflow:hidden}.pipeline svg{display:block;width:100%;height:auto}.pipeline text{font-family:ui-sans-serif,system-ui,sans-serif}.s-box{fill:var(--soft);stroke:var(--line);stroke-width:1.5}.s-main{fill:var(--indigo-soft);stroke:var(--indigo);stroke-width:1.7}.s-good{fill:var(--green-soft);stroke:var(--green);stroke-width:1.7}.s-title{fill:var(--ink);font-size:15px;font-weight:750}.s-small{fill:var(--muted);font-size:12px}.s-line{fill:none;stroke:var(--indigo);stroke-width:2}
+    .math{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}.math article{padding:20px 21px;background:var(--code);color:var(--code-text)}.math b{display:block;color:#a5b4fc;font-size:.78rem;letter-spacing:.07em;margin-bottom:7px}.math strong{display:block;color:#fff;font:700 1.45rem/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}.math span{display:block;margin-top:8px;color:#aab5c6;font-size:.82rem;line-height:1.45}
+    .formulae{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}.formula-card{padding:18px 19px;background:var(--code);color:var(--code-text)}.formula-card b{display:block;margin-bottom:7px;color:#a5b4fc;font-size:.76rem;letter-spacing:.07em}.formula{color:#fff;font:700 .96rem/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.formula-card p{margin:8px 0 0;color:#aab5c6;font-size:.82rem;line-height:1.45}.moe-rule{margin:24px 0;padding:22px;background:var(--amber-soft);border:1px solid var(--amber);color:var(--ink)}.moe-rule strong{display:block;margin-bottom:4px;color:var(--amber);font-size:.78rem;letter-spacing:.06em}.moe-rule p{margin:0;font-size:1.04rem}.model-table-wrap{margin:25px 0;border:1px solid var(--line);background:var(--paper)}.model-table{width:100%;border-collapse:collapse;font-size:.86rem;line-height:1.45}.model-table th{padding:12px 11px;background:var(--soft);color:var(--ink);text-align:left;font-size:.74rem;letter-spacing:.035em;vertical-align:bottom}.model-table td{padding:13px 11px;border-top:1px solid var(--line);vertical-align:top}.model-table td:first-child{color:var(--ink);font-weight:780}.model-table small{display:block;margin-top:3px;color:var(--muted);font-size:.76rem;line-height:1.4}.infra-ladder{margin:30px 0;padding:16px;background:var(--paper);border:1px solid var(--line)}.infra-ladder svg{display:block;width:100%;height:auto}.bar-weight{fill:var(--indigo)}.bar-headroom{fill:var(--amber)}.bar-line{stroke:var(--paper);stroke-width:1;opacity:.8}.ladder-axis{stroke:var(--line);stroke-width:2}.ladder-label{fill:var(--ink);font:750 18px ui-sans-serif,system-ui,sans-serif}.ladder-small{fill:var(--muted);font:14px ui-sans-serif,system-ui,sans-serif}.ladder-count{fill:var(--ink);font:800 17px ui-monospace,SFMono-Regular,Menlo,monospace}.source-note{margin:18px 0 0;color:var(--muted);font-size:.79rem;line-height:1.55}.source-note a{white-space:normal}.playbook{display:grid;gap:0;margin-top:20px}.move{display:grid;grid-template-columns:172px 1fr;gap:24px;padding:14px 0;border-top:1px solid var(--line)}.move:first-child{border-top:0}.move h3{margin:2px 0;color:var(--indigo);font-size:.9rem;letter-spacing:.035em}.move p{margin:0;font-size:.94rem}
+    .budget{margin:24px 0;padding:20px;background:var(--paper);border:1px solid var(--line);font:700 clamp(.82rem,2.2vw,1.02rem)/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);text-align:center}.budget span{color:var(--indigo)}
+    .layer-chain{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.layer-chain div{position:relative;padding:14px 10px;background:var(--paper);text-align:center}.layer-chain b{display:block;color:var(--ink);font-size:.84rem}.layer-chain span{display:block;margin-top:3px;color:var(--muted);font-size:.72rem;line-height:1.35}.layer-chain div+div:before{content:"→";position:absolute;left:-8px;top:50%;transform:translateY(-50%);z-index:2;width:15px;height:22px;background:var(--line);color:var(--ink);font-weight:800;line-height:22px}
+    .stack{margin:24px 0;border:1px solid var(--line);background:var(--paper)}.stack-row{display:grid;grid-template-columns:170px 1fr;gap:24px;padding:16px 19px;border-top:1px solid var(--line)}.stack-row:first-child{border-top:0}.stack-row b{color:var(--ink)}.stack-row p{margin:0;font-size:.93rem}
+    .subhead{margin-top:36px}.compact-note{margin:22px 0;padding:18px 20px;background:var(--soft);border-top:2px solid var(--indigo);font-size:.94rem}.compact-note p{margin:0}
+    .file-tree{margin:24px 0;padding:20px;background:var(--code);color:var(--code-text);font:13px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}.file-tree .root{color:#a5b4fc;font-weight:800}.file-tree .note{color:#94a3b8}
+    .rules{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}.rule{padding:21px;background:var(--paper);border:1px solid var(--line)}.rule h3{margin:0 0 5px;font-size:1.1rem}.rule .mode{display:block;margin-bottom:12px;color:var(--indigo);font:700 .76rem ui-monospace,SFMono-Regular,Menlo,monospace}.rule p{margin:0;font-size:.92rem}.placement{padding:14px 18px;background:var(--ink);color:var(--bg);text-align:center;font-weight:780;line-height:1.5}
+    .thesis-chain{margin:25px 0;padding:20px;background:var(--ink);color:var(--bg);font:750 clamp(.86rem,2vw,1rem)/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}.thesis-chain span{color:#a5b4fc}.thesis-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.thesis-grid article{padding:18px;background:var(--paper)}.thesis-grid b{display:block;color:var(--indigo);font-size:1.2rem}.thesis-grid p{margin:4px 0 0;color:var(--muted);font-size:.86rem;line-height:1.45}
+    .question{margin:28px 0 0;padding:23px;background:var(--indigo-soft);color:var(--ink);font-size:1.08rem}.question b{display:block;color:var(--indigo);font-size:.8rem;letter-spacing:.06em;margin-bottom:6px}
+    .reading-paths{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:24px 0;background:var(--line);border:1px solid var(--line)}.reading-paths article{padding:18px;background:var(--paper)}.reading-paths b{display:block;color:var(--ink);font-size:.95rem}.reading-paths span{display:block;margin:3px 0 8px;color:var(--indigo);font:700 .76rem ui-monospace,SFMono-Regular,Menlo,monospace}.reading-paths p{margin:0;color:var(--muted);font-size:.84rem;line-height:1.5}
+    .numbered{counter-reset:item;margin:22px 0;padding:0;list-style:none}.numbered li{counter-increment:item;display:grid;grid-template-columns:34px 1fr;gap:13px;padding:14px 0;border-top:1px solid var(--line)}.numbered li:before{content:counter(item);display:grid;place-items:center;width:30px;height:30px;background:var(--ink);color:var(--bg);font:800 .78rem ui-monospace,SFMono-Regular,Menlo,monospace}.numbered li:first-child{border-top:0}.numbered b{color:var(--ink)}
+    .decision-table{width:100%;border-collapse:collapse;margin:24px 0;background:var(--paper);border:1px solid var(--line);font-size:.9rem;line-height:1.5}.decision-table th{padding:12px 14px;background:var(--soft);color:var(--ink);text-align:left;font-size:.76rem;letter-spacing:.035em}.decision-table td{padding:13px 14px;border-top:1px solid var(--line);vertical-align:top}.decision-table td:first-child{color:var(--ink);font-weight:780;width:24%}
+    .glossary{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;margin:0}.glossary div{padding:13px 0;border-top:1px solid var(--line)}.glossary dt{color:var(--ink);font-weight:780}.glossary dd{margin:2px 0 0;color:var(--muted);font-size:.88rem;line-height:1.5}
+    footer{padding:30px 0 46px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}.guides{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin:18px 0 21px}.guide{color:var(--text)}.guide b{color:var(--indigo)}.slug{display:block;font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+    @media(max-width:660px){body{font-size:16px}.meta{gap:7px 13px}.meta span+span:before{display:none}.shell{width:min(100% - 24px,780px)}header{padding-top:44px}.toc{padding:20px}.toc ol{columns:1}.phase-grid,.math,.formulae,.rules,.glossary,.guides,.thesis-grid,.layer-chain,.reading-paths{grid-template-columns:1fr}.layer-chain div{text-align:left;padding:12px 14px}.layer-chain div+div:before{content:"↓";left:50%;top:-11px;transform:translateX(-50%);width:22px;text-align:center}.metric-row{grid-template-columns:1fr}.move,.stack-row{grid-template-columns:1fr;gap:5px}.move h3{margin-top:0}.pipeline,.infra-ladder{margin-inline:-3px;padding:8px}.pipeline .s-title{font-size:19px}.pipeline .s-small{font-size:15px}.model-table-wrap{border:0;background:transparent}.model-table,.model-table tbody,.model-table tr,.model-table td{display:block;width:100%}.model-table thead{display:none}.model-table tr{margin:0 0 12px;border:1px solid var(--line);background:var(--paper)}.model-table td{display:grid;grid-template-columns:105px 1fr;gap:12px;padding:9px 12px;border-top:1px solid var(--line)}.model-table td:first-child{padding-top:13px;border-top:0;font-size:1.02rem}.model-table td:first-child:before{display:none}.model-table td:before{content:attr(data-label);color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.03em}.decision-table,.decision-table tbody,.decision-table tr,.decision-table td{display:block;width:100%}.decision-table{border:0;background:transparent}.decision-table thead{display:none}.decision-table tr{margin:0 0 12px;border:1px solid var(--line);background:var(--paper)}.decision-table td{display:grid;grid-template-columns:104px 1fr;gap:12px;width:auto;padding:10px 12px;border-top:1px solid var(--line)}.decision-table td:first-child{width:auto;border-top:0;font-size:1rem}.decision-table td:first-child:before{display:none}.decision-table td:before{content:attr(data-label);color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.03em}.infra-ladder .ladder-label{font-size:22px}.infra-ladder .ladder-small{font-size:17px}.infra-ladder .ladder-count{font-size:19px}.thesis-chain{text-align:left}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.progress{display:none}}
+    @media print{.progress{display:none}:root{--bg:#fff;--paper:#fff;--ink:#111827;--text:#334155;--muted:#475569;--line:#cbd5e1;--soft:#f8fafc;--indigo:#4338ca;--indigo-soft:#eef2ff;--shadow:none}.toc{box-shadow:none}.shell{width:100%;max-width:none}header{padding-top:24px}section{break-inside:auto}.pull,.phase,.math article,.rule,.pipeline{break-inside:avoid}}
+  </style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+<header>
+  <div class="shell">
+    <p class="series">Inference engineering · team reference</p>
+    <h1>Inference is an infrastructure problem</h1>
+    <p class="dek">How an inference request moves from application to accelerator, what current open-weight models demand from hardware, and where the Nutanix stack fits from control plane to GPU memory.</p>
+    <div class="meta"><span>Nutanix team</span><span>September 2026</span><span>≈ 45–60 min reference</span></div>
+    <p class="attribution">Original post created for internal team education. Inference concepts from <cite>Inference Engineering</cite> by Philip Kiely (Baseten Books, 2026).</p>
+  </div>
+</header>
+<nav class="toc shell" aria-label="Table of contents">
+  <h2>In this reference</h2>
+  <ol>
+    <li><a href="#why">How to use this guide</a></li>
+    <li><a href="#not-training">How an inference request behaves</a></li>
+    <li><a href="#latency">A worked latency budget</a></li>
+    <li><a href="#transformer">The hardware mental model</a></li>
+    <li><a href="#hardware">Do the math: model footprints</a></li>
+    <li><a href="#kv">KV cache and concurrency</a></li>
+    <li><a href="#parallelism">Parallelism and fabric choices</a></li>
+    <li><a href="#speed">A short runtime pointer</a></li>
+    <li><a href="#production">The infrastructure bill of materials</a></li>
+    <li><a href="#nutanix">The inference stack on Nutanix</a></li>
+    <li><a href="#operations">Scaling, ownership, and failure modes</a></li>
+    <li><a href="#artifacts">Artifact lifecycle</a></li>
+    <li><a href="#files-objects">Files vs Objects</a></li>
+    <li><a href="#capacity">Capacity-planning checklist</a></li>
+    <li><a href="#together">Putting it together</a></li>
+    <li><a href="#thesis">The infrastructure thesis</a></li>
+    <li><a href="#next">Discussion questions</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</nav>
+<main class="shell">
+  <section id="why">
+    <h2>How to use this guide</h2>
+    <p class="lede">This is the team’s systems-level map of inference: the path from an incoming request to generated tokens, and the infrastructure required to make that path predictable.</p>
+    <p>Read it straight through for the overall architecture, or use it as a field reference during sizing, design review, and incident response. The center of gravity is infrastructure: HBM capacity, GPU topology, east-west fabric, storage throughput, failure domains, power, scheduling, and the Nutanix operating model. Runtime techniques appear only where they materially change that bill.</p>
+    <div class="reading-paths">
+      <article><b>Understand the system</b><span>REQUEST → HARDWARE</span><p>Start with request phases, the latency budget, roofline, KV cache, and model-footprint math.</p></article>
+      <article><b>Design the platform</b><span>TOPOLOGY → NUTANIX</span><p>Jump to parallelism, the bill of materials, Nutanix responsibilities, storage tiers, and autoscaling.</p></article>
+      <article><b>Review a deployment</b><span>CHECKLIST → FAILURE MODES</span><p>Use the capacity checklist, artifact lifecycle, ownership matrix, and operational failure table.</p></article>
+    </div>
+    <p>The arithmetic is intentionally explicit. Every worked number is approximate and tied to stated assumptions; production decisions still require benchmark data from the exact model, precision, serving framework, GPU, context distribution, and concurrency target.</p>
+  </section>
+
+  <section id="not-training">
+    <h2>How an inference request behaves</h2>
+    <p>Training is a long, throughput-oriented batch job that changes model parameters. Inference holds those parameters fixed and answers requests online. The path is layered: an application calls an API gateway; the gateway routes to a serving framework such as vLLM or TensorRT-LLM; the framework drives model execution; and the runtime finally schedules work onto GPU hardware. <strong>The serving-framework layer is where our team will operate the service</strong>, but every layer beneath it can set the latency ceiling.</p>
+    <div class="layer-chain" aria-label="Layered inference request path">
+      <div><b>Application</b><span>prompt + policy</span></div><div><b>API gateway</b><span>admission + routing</span></div><div><b>Serving framework</b><span>vLLM / TensorRT-LLM class</span></div><div><b>Execution</b><span>model graph + CUDA</span></div><div><b>GPU hardware</b><span>HBM + SMs + fabric</span></div>
+    </div>
+    <div class="phase-grid">
+      <article class="phase"><b>PREFILL</b><p>The prompt is processed largely in parallel to build attention state. This phase is rich in matrix work and is usually compute-bound.</p></article>
+      <article class="phase decode"><b>DECODE</b><p>The model emits one token per forward pass, appends it to the sequence, then repeats. The loop is sequential and usually memory-bandwidth-bound.</p></article>
+    </div>
+    <p>Those phases produce different user-facing numbers. <strong>Time to first token (TTFT)</strong> captures queueing plus prefill. <strong>Tokens per second (TPS)</strong>, or its inverse inter-token latency (ITL), describes the decode stream. A service can begin quickly and finish slowly—or the reverse—because the two phases stress different resources.</p>
+    <dl class="metric-row">
+      <div class="metric"><dt>TTFT</dt><dd>Request arrival to the first visible token; dominated by queueing and prefill.</dd></div>
+      <div class="metric"><dt>TPS / ITL</dt><dd>Decode throughput, or the delay between streamed tokens.</dd></div>
+      <div class="metric"><dt>p50 / p90 / p99</dt><dd>The latency distribution, not one average. p99 exposes queueing, faults, and noisy neighbors.</dd></div>
+    </dl>
+    <blockquote class="pull">The average tells you the machine is healthy. The tail tells you whether users agree.</blockquote>
+  </section>
+
+  <section id="latency">
+    <h2>A worked latency budget</h2>
+    <p class="lede">A latency SLO becomes useful only after it is split into terms owned by different parts of the system.</p>
+    <p>Consider an illustrative interactive request with a <strong>≈2,000-token prompt</strong>, an <strong>≈500-token answer</strong>, <strong>≈300 ms</strong> of prefill, and decode throughput of <strong>≈50 tokens/s</strong>. Ignoring small overlap effects, model time is:</p>
+    <div class="budget"><span>model latency</span> ≈ 0.3 s + (500 tokens ÷ 50 tokens/s) = <strong>≈10.3 s</strong></div>
+    <p>Decode contributes ≈10 seconds—about 97% of model time in this example. A faster prefill improves the first visible response, but it barely changes completion time. A faster decode changes completion time directly. That distinction prevents a team from celebrating a TTFT improvement while the user still waits just as long for the full answer.</p>
+    <div class="stack" aria-label="Illustrative latency budget by stage">
+      <div class="stack-row"><b>Ingress · ≈40 ms</b><p>TLS, gateway policy, and request parsing. Moved by network placement, connection reuse, and gateway capacity.</p></div>
+      <div class="stack-row"><b>Queue · ≈110 ms</b><p>Waiting for an eligible replica. Moved by admission control, replica count, scheduling policy, and warm capacity; this term often dominates p99 before average utilization looks high.</p></div>
+      <div class="stack-row"><b>Prefill · ≈300 ms</b><p>Prompt processing and initial KV construction. Moved by compute throughput, prompt length, batching, and prefill-pool capacity.</p></div>
+      <div class="stack-row"><b>Decode · ≈10,000 ms</b><p>≈500 serial token steps at ≈50 tokens/s. Moved by HBM bandwidth, decode batching, model size and precision, and decode-pool capacity.</p></div>
+      <div class="stack-row"><b>Egress · ≈50 ms</b><p>Streaming and client/network delivery. Moved by backpressure handling, network quality, and application behavior.</p></div>
+    </div>
+    <div class="budget"><span>end-to-end</span> ≈ 40 ms + 110 ms + 300 ms + 10,000 ms + 50 ms = <strong>≈10.5 s</strong></div>
+    <p>Two budgets should therefore be written separately. The <strong>first-token budget</strong> is ingress + queue + prefill + first-byte delivery, ≈500 ms here. The <strong>completion budget</strong> adds the decode stream, ≈10.5 seconds here. At capacity-review time, record both p50 and p99 for each term; otherwise queueing and fabric stalls disappear inside one opaque endpoint number.</p>
+  </section>
+
+  <section id="transformer">
+    <h2>The hardware mental model</h2>
+    <p>A decoder-only transformer repeats a block containing <strong>masked self-attention</strong> and a feed-forward <strong>MLP</strong>, wrapped by normalization and residual connections. Attention creates the KV cache; the MLP holds much of the parameter mass. That is enough anatomy for infrastructure sizing.</p>
+    <p>The <strong>roofline model</strong> supplies the key mental shortcut: arithmetic intensity—operations performed per byte moved—determines whether performance is capped by compute or memory bandwidth. Prefill generally sits nearer the compute roof; autoregressive decode repeatedly streams weights and a growing KV cache, so it usually sits on the bandwidth slope.</p>
+    <div class="pipeline" aria-label="Roofline diagram comparing prefill and decode">
+      <svg viewBox="0 0 720 390" role="img" aria-labelledby="rft rfd"><title id="rft">Roofline model for inference</title><desc id="rfd">Achievable performance rises with arithmetic intensity on the memory bandwidth slope, then flattens at the compute ceiling. Decode appears left of the ridge point and prefill appears to the right.</desc><defs><marker id="roofarrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--muted)"/></marker></defs>
+        <line x1="84" y1="320" x2="682" y2="320" stroke="var(--muted)" stroke-width="2" marker-end="url(#roofarrow)"/><line x1="84" y1="320" x2="84" y2="38" stroke="var(--muted)" stroke-width="2" marker-end="url(#roofarrow)"/>
+        <text x="383" y="366" text-anchor="middle" class="s-title">Arithmetic intensity · operations per byte →</text><text x="84" y="25" class="s-title">Achievable performance ↑</text>
+        <path d="M84 320L365 88H664" fill="none" stroke="var(--indigo)" stroke-width="5"/><line x1="365" y1="88" x2="365" y2="320" stroke="var(--line)" stroke-width="2" stroke-dasharray="7 7"/>
+        <text x="180" y="218" transform="rotate(-39 180 218)" class="s-small">memory-bandwidth ceiling</text><text x="510" y="75" text-anchor="middle" class="s-small">compute ceiling</text><text x="365" y="344" text-anchor="middle" class="s-small">ridge point</text>
+        <circle cx="205" cy="220" r="11" fill="var(--green)"/><text x="205" y="194" text-anchor="middle" class="s-title">Decode</text><text x="205" y="246" text-anchor="middle" class="s-small">moves bytes repeatedly</text>
+        <circle cx="530" cy="88" r="11" fill="var(--amber)"/><text x="530" y="122" text-anchor="middle" class="s-title">Prefill</text><text x="530" y="145" text-anchor="middle" class="s-small">reuses data for matrix work</text>
+      </svg>
+    </div>
+    <p>The ridge point is the balance between peak compute and memory bandwidth. Left of it, adding arithmetic units cannot help if bytes arrive too slowly. Right of it, more bandwidth alone cannot exceed the compute ceiling. The plot is conceptual rather than a benchmark: the useful act is placing each phase with measurements from the target GPU and batch shape.</p>
+    <div class="thesis-grid">
+      <article><b>HBM</b><p>Capacity holds weights, KV cache, and buffers; bandwidth feeds the execution units during decode.</p></article>
+      <article><b>SMs</b><p>Streaming multiprocessors and Tensor Cores provide the compute budget that prefill can consume.</p></article>
+      <article><b>NVLink</b><p>GPU interconnect extends the execution domain when one device cannot hold or compute the model.</p></article>
+    </div>
+    <p>A <strong>Mixture-of-Experts (MoE)</strong> layer uses a router to send each token to only a few expert MLPs out of many. That reduces FLOPs per token, but not the resident weight set: for low-latency serving, all experts still need to be addressable. In other words, you can compute with ≈32B active parameters while provisioning HBM for the whole ≈1T model.</p>
+    <p>Inside a node, NVLink/NVSwitch provides the high-bandwidth GPU fabric. Across nodes, InfiniBand or Ethernet carries collectives and expert-routing traffic. Once tensor or expert parallelism crosses that boundary, <strong>the interconnect becomes part of the accelerator</strong>—and topology, congestion, and failure domains become model-performance concerns.</p>
+  </section>
+
+  <section id="hardware">
+    <h2>Do the math: what today’s open models actually require</h2>
+    <p class="lede">Model selection is capacity planning. Before choosing a runtime, calculate the bytes that must live in HBM, the attention state each request adds, and the number of failure domains the replica crosses.</p>
+    <div class="formulae">
+      <article class="formula-card"><b>1 · WEIGHT MEMORY</b><div class="formula">parameters × bytes / parameter</div><p>BF16 = 2 bytes · FP8 = 1 byte · INT4 ≈ 0.5 byte. This is the floor, not the deployment budget.</p></article>
+      <article class="formula-card"><b>2 · KV CACHE</b><div class="formula">≈ 2 × layers × kv_heads × head_dim × bytes</div><p>That is per token, per live sequence. Multiply by all live tokens; GQA and MLA reduce the stored key/value channels dramatically.</p></article>
+      <article class="formula-card"><b>3 · GPU COUNT</b><div class="formula">ceil[(weights + live KV) ÷ 72 GB usable]</div><p>Here 72 GB is 90% of an 80 GB H100; the remaining 8 GB/GPU is reserved for runtime buffers, allocator fragmentation, and operational headroom.</p></article>
+      <article class="formula-card"><b>4 · NODE COUNT</b><div class="formula">ceil(planned GPUs ÷ 8 GPUs / node)</div><p>Cross the eight-GPU boundary and the rack fabric joins the critical path. Power and cooling scale in the same step.</p></article>
+    </div>
+    <div class="moe-rule"><strong>THE MoE RULE FOR LOW-LATENCY SERVING</strong><p>In the fully GPU-resident scenario sized here, all experts stay in HBM while only the active experts drive compute per token. Offload to host memory or NVMe can reduce HBM demand, but adds traffic and latency. <b>You provision the whole trillion for memory while burning ≈32B worth of FLOPs.</b></p></div>
+
+    <h3>A worked sizing comparison</h3>
+    <p>These are planning-level calculations for one specific scenario: FP8 weights kept fully in GPU memory for low-latency serving on H100 SXM GPUs with 80 GB HBM. Each row applies the 72 GB usable-HBM rule; where a concrete KV estimate is shown, it budgets one long sequence. “Capacity” is the formula result; “provisioned” rounds that result to the selected GPU topology. Real capacity planning repeats the live-KV term for target concurrency. This is not the minimum configuration that can run each model.</p>
+    <div class="model-table-wrap">
+      <table class="model-table">
+        <thead><tr><th>Model</th><th>Params<br>total / active</th><th>Weights<br>FP8</th><th>H100s<br>capacity / provisioned</th><th>Nodes</th><th>KV-cache / deployment note</th></tr></thead>
+        <tbody>
+          <tr><td>gpt-oss-120b<small>OpenAI · Apache 2.0 · ≈131K context</small></td><td data-label="Parameters">≈117B / ≈5.1B MoE</td><td data-label="FP8 weights">≈117 GB</td><td data-label="H100s: capacity / provisioned">≈2 / 2</td><td data-label="8-GPU nodes">≈1</td><td data-label="KV / deployment">117 GB ÷ 72 GB usable/GPU = 1.63 → 2 GPUs, leaving ≈27 GB of the usable envelope for live KV. Native MXFP4 can fit one 80 GB GPU.</td></tr>
+          <tr><td>Qwen3-235B-A22B<small>Alibaba · Apache 2.0</small></td><td data-label="Parameters">≈235B / ≈22B MoE</td><td data-label="FP8 weights">≈235 GB</td><td data-label="H100s: capacity / provisioned">≈4 / 4</td><td data-label="8-GPU nodes">≈1</td><td data-label="KV / deployment">235 GB ÷ 72 GB usable/GPU = 3.27 → 4 GPUs, leaving ≈53 GB of the usable envelope for workload-specific live KV.</td></tr>
+          <tr><td>Llama 3.1 405B<small>Meta · dense · ≈128K context</small></td><td data-label="Parameters">≈405B / ≈405B</td><td data-label="FP8 weights">≈405 GB</td><td data-label="H100s: capacity / provisioned">≈7 / 8</td><td data-label="8-GPU nodes">≈1</td><td data-label="KV / deployment">≈500 KB/token × ≈128K = ≈64 GB KV; (405 + 64) ÷ 72 = 6.51 → round to the published 8×H100 topology.</td></tr>
+          <tr><td>DeepSeek V3.1<small>DeepSeek · MIT · ≈128K context</small></td><td data-label="Parameters">≈671B / ≈37B MoE<small>≈685B including MTP module</small></td><td data-label="FP8 weights">≈685 GB</td><td data-label="H100s: capacity / provisioned">≈10 / 10</td><td data-label="8-GPU nodes">≈2</td><td data-label="KV / deployment">MLA planning value ≈70 KB/token × ≈128K = ≈9 GB; (685 + 9) ÷ 72 = 9.64 → 10 GPUs by capacity across two nodes.</td></tr>
+          <tr><td>Kimi K2<small>Moonshot AI · modified MIT · ≈128K context</small></td><td data-label="Parameters">≈1T / ≈32B MoE</td><td data-label="FP8 weights">≈1 TB</td><td data-label="H100s: capacity / provisioned">≈15 / 16</td><td data-label="8-GPU nodes">≈2</td><td data-label="KV / deployment">MLA ≈70 KB/token × ≈128K = ≈9 GB; (1,000 + 9) ÷ 72 = 14.01 → ceil to 15 GPUs by capacity, provision 16 across two full nodes. A published large deployment used 128×H200.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="infra-ladder" aria-label="Infrastructure ladder comparing model memory, GPU count, node count, and power">
+      <svg viewBox="0 0 720 500" role="img" aria-labelledby="lt ld"><title id="lt">Infrastructure ladder for five open-weight models</title><desc id="ld">Five bars increase from GPT OSS at two capacity-planned H100 GPUs to Kimi K2 provisioned across sixteen H100 GPUs. Blue shows FP8 weight memory and amber shows capacity beyond weights. Power labels use the approximately 10.2 kilowatt maximum whole-system envelope of a fully populated DGX H100 node.</desc>
+        <text x="24" y="30" class="ladder-label">FP8 weights versus planned HBM capacity</text><text x="24" y="54" class="ladder-small">Bars show planned topology · power = occupied DGX H100 max envelope</text>
+        <line x1="24" y1="382" x2="700" y2="382" class="ladder-axis"/>
+
+        <rect x="42" y="359.6" width="88" height="22.4" class="bar-headroom"/><rect x="42" y="365.6" width="88" height="16.4" class="bar-weight"/><line x1="42" y1="370.8" x2="130" y2="370.8" class="bar-line"/>
+        <text x="86" y="340" text-anchor="middle" class="ladder-count">≈2 GPUs</text><text x="86" y="414" text-anchor="middle" class="ladder-label">gpt-oss</text><text x="86" y="436" text-anchor="middle" class="ladder-small">≈1 node · ≤≈10.2 kW max</text>
+
+        <rect x="178" y="337.2" width="88" height="44.8" class="bar-headroom"/><rect x="178" y="349.1" width="88" height="32.9" class="bar-weight"/><path d="M178 370.8H266M178 359.6H266M178 348.4H266" class="bar-line"/>
+        <text x="222" y="318" text-anchor="middle" class="ladder-count">≈4 GPUs</text><text x="222" y="414" text-anchor="middle" class="ladder-label">Qwen3</text><text x="222" y="436" text-anchor="middle" class="ladder-small">≈1 node · ≤≈10.2 kW max</text>
+
+        <rect x="314" y="292.4" width="88" height="89.6" class="bar-headroom"/><rect x="314" y="325.3" width="88" height="56.7" class="bar-weight"/><path d="M314 370.8H402M314 359.6H402M314 348.4H402M314 337.2H402M314 326H402M314 314.8H402M314 303.6H402" class="bar-line"/>
+        <text x="358" y="273" text-anchor="middle" class="ladder-count">≈8 GPUs</text><text x="358" y="414" text-anchor="middle" class="ladder-label">Llama 405B</text><text x="358" y="436" text-anchor="middle" class="ladder-small">≈1 node · ≤≈10.2 kW max</text>
+
+        <rect x="450" y="270" width="88" height="112" class="bar-headroom"/><rect x="450" y="275.5" width="88" height="106.5" class="bar-weight"/><path d="M450 370.8H538M450 359.6H538M450 348.4H538M450 337.2H538M450 326H538M450 314.8H538M450 303.6H538M450 292.4H538M450 281.2H538" class="bar-line"/>
+        <text x="494" y="251" text-anchor="middle" class="ladder-count">≈10 GPUs</text><text x="494" y="414" text-anchor="middle" class="ladder-label">DeepSeek V3.1</text><text x="494" y="436" text-anchor="middle" class="ladder-small">≈2 nodes · ≤≈20.4 kW max</text>
+
+        <rect x="586" y="202.8" width="88" height="179.2" class="bar-headroom"/><rect x="586" y="242" width="88" height="140" class="bar-weight"/><path d="M586 370.8H674M586 359.6H674M586 348.4H674M586 337.2H674M586 326H674M586 314.8H674M586 303.6H674M586 292.4H674M586 281.2H674M586 270H674M586 258.8H674M586 247.6H674M586 236.4H674M586 225.2H674M586 214H674" class="bar-line"/>
+        <text x="630" y="183" text-anchor="middle" class="ladder-count">≈16 GPUs</text><text x="630" y="414" text-anchor="middle" class="ladder-label">Kimi K2</text><text x="630" y="436" text-anchor="middle" class="ladder-small">≈2 nodes · ≤≈20.4 kW max</text>
+
+        <rect x="24" y="462" width="13" height="13" class="bar-weight"/><text x="44" y="474" class="ladder-small">model weights</text><rect x="164" y="462" width="13" height="13" class="bar-headroom"/><text x="184" y="474" class="ladder-small">planned capacity beyond weights</text>
+      </svg>
+    </div>
+    <p>The jump from one node to two changes the problem qualitatively. Tensor collectives and expert routing leave the NVLink domain; replica placement now consumes rack-level power, cooling, and fabric; and any failure or drain operation can move a near-terabyte service footprint.</p>
+    <p class="source-note"><strong>Snapshot sources, checked September 24, 2026:</strong> <a href="https://huggingface.co/openai/gpt-oss-120b">OpenAI gpt-oss model card</a> · <a href="https://huggingface.co/RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8">Llama 3.1 405B FP8 model card</a> · <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-qwen-qwen3-235b-a22b-2507.html">Qwen3 model details</a> · <a href="https://huggingface.co/deepseek-ai/DeepSeek-V3.1">DeepSeek V3.1 model card</a> · <a href="https://github.com/joncode/Kimi-K2/raw/refs/heads/main/tech_report.pdf">Kimi K2 technical report</a> · <a href="https://github.com/xai69/mooncake">Kimi K2 deployment reference</a> · <a href="https://www.nvidia.com/en-us/data-center/h100/?srsltid=AfmBOooZxlUhcPpZR_yxelzppfssKRPWrpXwcSyGzhofFfZfeTtt0thh">NVIDIA H100 specifications</a> · <a href="https://nvidia.com/content/dam/en-zz/pt_br/Solutions/Data-Center/dgx-h100/dgx-h100-datasheet-ptbr-final.pdf">NVIDIA DGX H100 system-power datasheet</a>. Capacity figures are ≈ planning estimates, not performance benchmarks or minimum runnable configurations.</p>
+  </section>
+
+  <section id="kv">
+    <h2>KV cache: the concurrency multiplier</h2>
+    <p class="lede">Weights determine whether one replica fits. KV cache determines how many long-running requests that replica can serve at once.</p>
+    <p>For standard attention, the approximate BF16 KV bytes created per token are:</p>
+    <div class="budget"><span>KV bytes / token</span> ≈ 2 × layers × kv_heads × head_dim × bytes / element</div>
+    <p>The leading 2 stores both keys and values. Grouped-query attention reduces <code>kv_heads</code>; multi-head latent attention stores a compressed latent representation instead. Allocator metadata, block rounding, speculative branches, and other runtime buffers still require additional headroom.</p>
+    <div class="math">
+      <article><b>LLAMA 3.1 405B · BF16 KV</b><strong>≈500 KB / token</strong><span>≈500 KB × ≈128K tokens ≈64 GB for one full-context request.</span></article>
+      <article><b>MLA-CLASS PLANNING VALUE</b><strong>≈70 KB / token</strong><span>≈70 KB × ≈128K tokens ≈9 GB for one full-context request.</span></article>
+    </div>
+    <p>Now apply concurrency. Eight simultaneous ≈128K-token sessions on the Llama example require <strong>≈8 × 64 GB = ≈512 GB of KV cache</strong>. That is larger than the ≈405 GB FP8 weight set. On eight 80 GB H100s, the nominal 640 GB of HBM cannot hold ≈405 GB of weights plus ≈512 GB of live KV; the model may fit, but the workload does not.</p>
+    <p>The MLA-class planning value changes the shape: eight ≈128K sessions consume ≈72 GB of KV. That is still operationally meaningful, but it is no longer larger than the trillion-parameter weight set. Attention architecture is therefore an infrastructure input, not merely a model-quality detail.</p>
+    <div class="formulae">
+      <article class="formula-card"><b>CONCURRENCY LIMIT</b><div class="formula">floor(KV budget ÷ bytes per live sequence)</div><p>Use the admitted sequence length, not the advertised maximum context window.</p></article>
+      <article class="formula-card"><b>LIVE-TOKEN BUDGET</b><div class="formula">Σ(prompt tokens + generated tokens)</div><p>Track active tokens across the whole replica. Averages hide the long sessions that trigger OOMs.</p></article>
+    </div>
+    <p>Capacity policy should state three numbers explicitly: maximum admitted context, maximum live tokens per replica, and the HBM reserve that cannot be allocated to KV. Without those limits, a few long-context prefills can evict useful cache blocks, stall admission, or crash the worker even when request count appears low.</p>
+  </section>
+
+  <section id="parallelism">
+    <h2>Parallelism is a fabric decision</h2>
+    <p>When a model or target throughput exceeds one GPU, the serving framework must divide work. The division method tells the network what kind of traffic it must carry and how a fault propagates.</p>
+    <table class="decision-table" aria-label="Parallelism decision table">
+      <thead><tr><th>Mode</th><th>What it splits</th><th>Use it when</th><th>Fabric demand</th><th>Characteristic failure</th></tr></thead>
+      <tbody>
+        <tr><td>Tensor parallelism</td><td data-label="What it splits">Individual layer operations across GPUs.</td><td data-label="When to use">A layer or model cannot fit one GPU, or one GPU cannot meet latency.</td><td data-label="Fabric demand">Frequent collectives; keep inside NVLink/NVSwitch where possible.</td><td data-label="Failure mode">One slow rank delays every collective; one rank loss takes down the replica.</td></tr>
+        <tr><td>Pipeline parallelism</td><td data-label="What it splits">Contiguous layer stages across GPUs or nodes.</td><td data-label="When to use">The model spans devices and stage balance is tractable.</td><td data-label="Fabric demand">Activation transfer between stages; inter-node links can work with careful partitioning.</td><td data-label="Failure mode">Pipeline bubbles and the slowest stage cap throughput.</td></tr>
+        <tr><td>Expert parallelism</td><td data-label="What it splits">MoE experts across devices.</td><td data-label="When to use">The full expert set exceeds a single memory domain.</td><td data-label="Fabric demand">Token all-to-all traffic; topology and congestion are first-order concerns.</td><td data-label="Failure mode">Hot experts or skewed routing create stragglers and fabric hotspots.</td></tr>
+        <tr><td>Data parallelism</td><td data-label="What it splits">Independent requests across complete replicas.</td><td data-label="When to use">One replica fits and horizontal throughput is the goal.</td><td data-label="Fabric demand">Low synchronization on the inference path; storage and ingress scale with replicas.</td><td data-label="Failure mode">Poor load balancing leaves one replica queued while others idle.</td></tr>
+      </tbody>
+    </table>
+    <p>The default infrastructure preference is simple: fit tensor-parallel ranks inside one high-bandwidth GPU domain, then scale with independent replicas. Cross a node boundary only when model capacity or measured throughput requires it, because every added rank enlarges the synchronous failure domain.</p>
+
+    <h3 class="subhead">Serving topology: separate unlike work</h3>
+    <div class="pipeline" aria-label="Disaggregated serving topology on NKP">
+      <svg viewBox="0 0 720 390" role="img" aria-labelledby="dst dsdesc"><title id="dst">Disaggregated prefill and decode serving topology</title><desc id="dsdesc">Requests pass from a gateway to a router and admission queue, then to a compute-oriented prefill pool. KV state transfers over the fabric into a bandwidth-oriented decode pool, which streams tokens to clients. NKP schedules and scales both pools.</desc><defs><marker id="dsarrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <rect x="24" y="54" width="110" height="62" rx="8" class="s-box"/><text x="79" y="82" text-anchor="middle" class="s-title">Gateway</text><text x="79" y="102" text-anchor="middle" class="s-small">auth + policy</text>
+        <rect x="174" y="54" width="130" height="62" rx="8" class="s-box"/><text x="239" y="82" text-anchor="middle" class="s-title">Router</text><text x="239" y="102" text-anchor="middle" class="s-small">admission + queue</text>
+        <rect x="354" y="28" width="150" height="114" rx="8" class="s-main"/><text x="429" y="66" text-anchor="middle" class="s-title">Prefill pool</text><text x="429" y="89" text-anchor="middle" class="s-small">compute-oriented</text><text x="429" y="111" text-anchor="middle" class="s-small">prompt → KV state</text>
+        <rect x="554" y="28" width="142" height="114" rx="8" class="s-good"/><text x="625" y="66" text-anchor="middle" class="s-title">Decode pool</text><text x="625" y="89" text-anchor="middle" class="s-small">bandwidth-oriented</text><text x="625" y="111" text-anchor="middle" class="s-small">KV → token stream</text>
+        <path d="M134 85H166M304 85H346M504 85H546" class="s-line" marker-end="url(#dsarrow)"/><text x="525" y="69" text-anchor="middle" class="s-small">KV transfer</text>
+        <rect x="174" y="196" width="330" height="62" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.7"/><text x="339" y="222" text-anchor="middle" class="s-title">Fabric + bounded transfer queue</text><text x="339" y="243" text-anchor="middle" class="s-small">backpressure prevents prefill from overrunning decode</text>
+        <path d="M429 142V188M625 142V227H512" class="s-line" marker-end="url(#dsarrow)"/>
+        <rect x="174" y="308" width="522" height="48" rx="8" class="s-good"/><text x="435" y="329" text-anchor="middle" class="s-title">NKP schedules, scales, and health-gates both pools</text><text x="435" y="347" text-anchor="middle" class="s-small">separate placement and capacity policies · one service SLO</text>
+        <path d="M339 258V300" class="s-line" marker-end="url(#dsarrow)"/>
+      </svg>
+    </div>
+    <p>Disaggregation exists for one infrastructure reason: <strong>prefill and decode have different scaling curves</strong>. Separate pools let compute-heavy prompt processing scale without forcing the same replica count, GPU type, or batching policy onto bandwidth-heavy token generation. The cost is a new KV-transfer path and queue that must be capacity-limited, observed, and included in failure testing.</p>
+  </section>
+
+  <section id="speed">
+    <h2>A short runtime pointer</h2>
+    <p>Kernel fusion, speculative decoding, batching, caching, parallelism, and quantization all matter, but they are not the center of this pre-read. Treat them as ways to reshape the infrastructure bill: quantization lowers bytes per weight, caching trades compute for memory, batching raises utilization, and parallelism spends interconnect bandwidth. Part 2 of the visual study guide explains those mechanisms in detail.</p>
+  </section>
+
+  <section id="production">
+    <h2>The infrastructure bill of materials</h2>
+    <p>Once the model footprint is known, a production replica becomes a concrete bill of materials—not an abstract endpoint.</p>
+    <div class="stack">
+      <div class="stack-row"><b>Accelerators</b><p>Enough aggregate HBM for weights plus headroom, arranged into the smallest practical number of high-bandwidth NVLink or NVSwitch domains.</p></div>
+      <div class="stack-row"><b>Host platform</b><p>CPU, RAM, PCIe lanes, NUMA topology, node-local NVMe, GPU passthrough, and a validated VM or bare-metal configuration.</p></div>
+      <div class="stack-row"><b>Fabric</b><p>Low-latency, high-throughput east-west networking for collectives, expert routing, KV transfer, replica loading, and failure recovery.</p></div>
+      <div class="stack-row"><b>Storage path</b><p>Durable object storage for immutable weight shards; NVMe staging for repeat loads; enough read throughput to hydrate replicas without turning a rollout into an outage.</p></div>
+      <div class="stack-row"><b>Facility</b><p>A fully populated DGX H100 is rated at ≈10.2 kW maximum whole-system power. The two-node DeepSeek V3.1 and Kimi K2 sizing scenarios create a ≤≈20.4 kW IT load envelope before rack switching, external storage, and cooling/PUE.</p></div>
+      <div class="stack-row"><b>Operations</b><p>Admission control, topology-aware placement, warm capacity, health gates, telemetry, upgrade sequencing, spare capacity, and rollback.</p></div>
+    </div>
+    <div class="budget"><span>cold-start lower bound</span> = model bytes ÷ effective end-to-end load bandwidth</div>
+    <p>A container being “Running” proves almost nothing. The replica is ready only after weight shards move from Objects to local NVMe, are verified, load into HBM, establish the distributed group, and pass a model-level health check. For the ≈1T-parameter Kimi K2 scenario, that path moves ≈1 TB before the first useful request.</p>
+  </section>
+
+  <section id="nutanix">
+    <h2>The inference stack on Nutanix</h2>
+    <p>The model server is only one process in a layered system. Nutanix contributes the operating envelopes, data services, network policy, and fleet view around it; each offering has a specific job rather than acting as a universal AI layer.</p>
+
+    <h3 class="subhead">Figure 1 · The inference stack on Nutanix</h3>
+    <div class="pipeline" aria-label="Layered inference stack with Nutanix offerings mapped to each layer">
+      <svg viewBox="0 0 720 520" role="img" aria-labelledby="nst nst-desc"><title id="nst">The inference stack on Nutanix</title><desc id="nst-desc">A request moves from applications through an API gateway, serving framework, execution runtime, and GPU hardware. Nutanix Enterprise AI, NKP, AHV, Flow, Objects, Files, and Prism are mapped to their infrastructure roles.</desc><defs><marker id="narrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <text x="24" y="31" class="s-title">Request path</text><text x="696" y="31" text-anchor="end" class="s-small">platform responsibilities</text>
+        <rect x="24" y="52" width="420" height="58" rx="7" class="s-box"/><text x="42" y="78" class="s-title">Application</text><text x="42" y="98" class="s-small">chat, agents, internal services</text><rect x="468" y="57" width="228" height="48" rx="7" class="s-good"/><text x="582" y="78" text-anchor="middle" class="s-title">Nutanix Enterprise AI</text><text x="582" y="96" text-anchor="middle" class="s-small">platform and model services</text>
+        <path d="M234 110V126" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="130" width="420" height="58" rx="7" class="s-box"/><text x="42" y="156" class="s-title">API gateway + ancillary services</text><text x="42" y="176" class="s-small">admission, routing, monitoring, tooling</text><rect x="468" y="135" width="108" height="48" rx="7" class="s-good"/><text x="522" y="164" text-anchor="middle" class="s-title">AHV VMs</text><rect x="588" y="135" width="108" height="48" rx="7" class="s-good"/><text x="642" y="155" text-anchor="middle" class="s-title">Flow</text><text x="642" y="174" text-anchor="middle" class="s-small">segmentation</text>
+        <path d="M234 188V204" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="208" width="420" height="66" rx="7" class="s-main"/><text x="42" y="235" class="s-title">Serving framework</text><text x="42" y="256" class="s-small">vLLM / TensorRT-LLM class · replicas and queues</text><rect x="468" y="217" width="228" height="48" rx="7" class="s-good"/><text x="582" y="238" text-anchor="middle" class="s-title">NKP</text><text x="582" y="256" text-anchor="middle" class="s-small">orchestrates GPU serving pools</text>
+        <path d="M234 274V290" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="294" width="420" height="58" rx="7" class="s-box"/><text x="42" y="320" class="s-title">Runtime / execution</text><text x="42" y="340" class="s-small">model graph · kernels · CUDA</text><rect x="468" y="299" width="228" height="48" rx="7" class="s-good"/><text x="582" y="320" text-anchor="middle" class="s-title">NKP + AHV envelope</text><text x="582" y="338" text-anchor="middle" class="s-small">containers or VMs by workload</text>
+        <path d="M234 352V368" class="s-line" marker-end="url(#narrow)"/>
+        <rect x="24" y="372" width="420" height="66" rx="7" class="s-main"/><text x="42" y="399" class="s-title">GPU hardware + fabric</text><text x="42" y="420" class="s-small">HBM · SMs · NVLink · east-west network</text><rect x="468" y="381" width="108" height="48" rx="7" class="s-good"/><text x="522" y="410" text-anchor="middle" class="s-title">Objects</text><rect x="588" y="381" width="108" height="48" rx="7" class="s-good"/><text x="642" y="410" text-anchor="middle" class="s-title">Files</text>
+        <rect x="24" y="462" width="672" height="38" rx="7" class="s-good"/><text x="360" y="486" text-anchor="middle" class="s-title">Prism · fleet visibility across compute, storage, and operations</text>
+      </svg>
+    </div>
+
+    <div class="stack">
+      <div class="stack-row"><b>Nutanix Enterprise AI</b><p>Defines the governed model-service layer: approved models, service endpoints, and the handoff between application consumers and the underlying serving estate. Its boundary should expose service policy without hiding GPU-capacity signals from operators.</p></div>
+      <div class="stack-row"><b>NKP</b><p>Orchestrates inference pools on Kubernetes: GPU resource requests, topology-aware placement, rollout sequencing, health gates, replica policy, and separate prefill/decode pools when disaggregation is justified.</p></div>
+      <div class="stack-row"><b>AHV</b><p>Provides the VM and host operating envelope for gateways, monitoring, tooling, and other infrastructure-adjacent services. GPU placement must align VM boundaries, passthrough choices, NUMA locality, and host-maintenance procedures.</p></div>
+      <div class="stack-row"><b>Flow</b><p>Applies network policy and microsegmentation around ingress, control-plane services, storage paths, and GPU workers. The goal is explicit service boundaries without blocking the high-volume east-west paths the model actually needs.</p></div>
+      <div class="stack-row"><b>Objects + Files</b><p>Objects is the immutable S3 model registry and durable blob store, with versioning and lifecycle policy around large artifacts. Files provides SMB/NFS semantics for shared, human- and tool-edited material that needs directories and in-place updates.</p></div>
+      <div class="stack-row"><b>Prism</b><p>Provides the fleet view across compute and storage: capacity pressure, maintenance state, resource placement, and the shared blast radius behind an apparently healthy model endpoint.</p></div>
+    </div>
+
+    <h3 class="subhead">Who owns what</h3>
+    <table class="decision-table" aria-label="Responsibility matrix for the inference platform">
+      <thead><tr><th>Layer</th><th>Primary owner</th><th>Concrete responsibility</th><th>Nutanix component</th></tr></thead>
+      <tbody>
+        <tr><td>Service policy</td><td data-label="Primary owner">AI platform team</td><td data-label="Responsibility">Approved model, endpoint contract, rollout policy, and service SLO.</td><td data-label="Nutanix component">Nutanix Enterprise AI</td></tr>
+        <tr><td>Scheduling</td><td data-label="Primary owner">Platform team</td><td data-label="Responsibility">GPU pool definitions, placement, health probes, warm replicas, and autoscaling.</td><td data-label="Nutanix component">NKP</td></tr>
+        <tr><td>Compute envelope</td><td data-label="Primary owner">Virtualization / compute team</td><td data-label="Responsibility">Host lifecycle, VM boundaries, NUMA and PCIe locality, and maintenance drain plans.</td><td data-label="Nutanix component">AHV</td></tr>
+        <tr><td>East-west network</td><td data-label="Primary owner">Network team</td><td data-label="Responsibility">Collective and KV-transfer bandwidth, congestion isolation, segmentation, and path telemetry.</td><td data-label="Nutanix component">Flow plus the physical fabric</td></tr>
+        <tr><td>Artifact storage</td><td data-label="Primary owner">Storage team</td><td data-label="Responsibility">Weight durability, versioning, lifecycle, shared workspace semantics, and load-path throughput.</td><td data-label="Nutanix component">Objects + Files</td></tr>
+        <tr><td>Fleet operations</td><td data-label="Primary owner">Infrastructure operations</td><td data-label="Responsibility">Capacity, maintenance coordination, resource pressure, and cross-layer incident context.</td><td data-label="Nutanix component">Prism</td></tr>
+      </tbody>
+    </table>
+    <p>These are design-review owners, not silos. A p99 TTFT regression can begin in a full NKP queue, a congested fabric, a slow weight load, or a host being drained. The runbook must preserve the cross-layer path even when each dashboard has a different owner.</p>
+
+    <h3 class="subhead">Figure 2 · The weight lifecycle</h3>
+    <p>Weight loading is a storage-and-network pipeline before it is a GPU operation. Every uncached replica must move and verify the same immutable bytes before it can serve.</p>
+    <div class="pipeline" aria-label="Model weight lifecycle from Nutanix Objects through local NVMe into GPU HBM">
+      <svg viewBox="0 0 720 300" role="img" aria-labelledby="wlt wld"><title id="wlt">The weight lifecycle</title><desc id="wld">Model weight shards move from a durable registry in Nutanix Objects to node-local NVMe and then into GPU HBM. The total transfer and initialization path defines cold-start time.</desc><defs><marker id="warrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <rect x="26" y="60" width="178" height="92" rx="8" class="s-good"/><text x="115" y="91" text-anchor="middle" class="s-title">Objects · S3</text><text x="115" y="113" text-anchor="middle" class="s-small">immutable source of truth</text><text x="115" y="134" text-anchor="middle" class="s-small">versioned weight shards</text>
+        <rect x="271" y="60" width="178" height="92" rx="8" class="s-box"/><text x="360" y="91" text-anchor="middle" class="s-title">Node-local NVMe</text><text x="360" y="113" text-anchor="middle" class="s-small">verified staging cache</text><text x="360" y="134" text-anchor="middle" class="s-small">survives pod restarts</text>
+        <rect x="516" y="60" width="178" height="92" rx="8" class="s-main"/><text x="605" y="91" text-anchor="middle" class="s-title">GPU HBM</text><text x="605" y="113" text-anchor="middle" class="s-small">active weights + KV</text><text x="605" y="134" text-anchor="middle" class="s-small">ready only after load</text>
+        <path d="M204 106H263" class="s-line" marker-end="url(#warrow)"/><text x="234" y="91" text-anchor="middle" class="s-small">network</text><path d="M449 106H508" class="s-line" marker-end="url(#warrow)"/><text x="479" y="91" text-anchor="middle" class="s-small">PCIe</text>
+        <rect x="26" y="190" width="668" height="74" rx="8" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="1.7"/><text x="46" y="219" class="s-title">Cold start is the whole path</text><text x="46" y="242" class="s-small">fetch → checksum → stage → allocate → load → form distributed group → model health check</text>
+      </svg>
+    </div>
+    <div class="budget"><span>cold-start lower bound</span> = model bytes ÷ effective end-to-end load bandwidth</div>
+    <p>For an illustrative ≈400 GB FP8 weight set, an effective end-to-end load path of ≈5 GB/s gives <strong>≈400 GB ÷ ≈5 GB/s = ≈80 seconds</strong> before checksum, allocation, distributed-group formation, graph initialization, and health checks. The slowest sustained stage—not the fastest device’s spec sheet—sets the floor. This is why a warm pool exists: it converts slow physical preparation into already-paid readiness.</p>
+    <h3 class="subhead">Storage hierarchy by temperature</h3>
+    <table class="decision-table" aria-label="Approximate storage hierarchy for inference">
+      <thead><tr><th>Tier</th><th>Approximate access scale</th><th>What belongs there</th><th>Design question</th></tr></thead>
+      <tbody>
+        <tr><td>Objects</td><td data-label="Access scale">≈tens of milliseconds</td><td data-label="Contents">Versioned weights, checkpoints, adapters, logs, snapshots, and durable history.</td><td data-label="Design question">Can the registry hydrate all planned cold starts without saturating its network path?</td></tr>
+        <tr><td>Files</td><td data-label="Access scale">≈milliseconds</td><td data-label="Contents">Mounted shared configuration, notebooks, evaluation inputs, and team workspaces.</td><td data-label="Design question">Does the workload truly need filesystem semantics and coordinated in-place updates?</td></tr>
+        <tr><td>Node NVMe</td><td data-label="Access scale">≈microseconds to milliseconds</td><td data-label="Contents">Verified weight staging, local cache, spill or temporary conversion outputs.</td><td data-label="Design question">Is cache identity tied to an immutable model digest, and what survives a pod restart?</td></tr>
+        <tr><td>GPU HBM</td><td data-label="Access scale">≈nanoseconds</td><td data-label="Contents">Active weights, KV blocks, activations, and execution buffers.</td><td data-label="Design question">How much remains after weights, fragmentation, and runtime reserve for live KV?</td></tr>
+      </tbody>
+    </table>
+    <p class="source-note">Latency labels are order-of-magnitude orientation, not Nutanix product benchmarks. Device, protocol, queue depth, transfer size, topology, and cache state can move observed values materially.</p>
+    <p>The hierarchy follows temperature and sharing semantics: <strong>Objects</strong> is cold and durable; <strong>Files</strong> is the shared workspace alongside the serving path; <strong>NVMe</strong> is the hot staging tier; <strong>HBM</strong> is the serving tier. Files is not an extra hop in the model-weight path.</p>
+
+    <h3 class="subhead">Control loops, warm capacity, and two workload envelopes</h3>
+    <p>NKP can scale decode replicas from signals such as queue depth and tail latency. But a new pod is not useful merely because it is scheduled: it may still need minutes to stage hundreds of gigabytes and load HBM. A <strong>warm pool</strong> of ready capacity is the shock absorber between the fast autoscaling decision and the slow physical cold start.</p>
+    <p><strong>etcd belongs to the control plane, not the data plane.</strong> It holds small desired-state facts and pointers—such as “production → model v2,” replica counts, and routing rules. It should never hold weight blobs, chat history, or KV-cache payloads. Inference workers stay replaceable; durable bytes live in Objects or Files according to their access pattern.</p>
+    <p>That same separation supports two operating envelopes: AHV VMs for stateful or infrastructure-adjacent services, and NKP containers for elastic GPU inference. Across locations, NKP provides a consistent Kubernetes operating model for on-premises Nutanix and policy-approved public-cloud GPU capacity: keep governed data on-prem, and burst eligible compute when placement policy permits.</p>
+    <blockquote class="pull">Objects → NVMe → HBM is the cold path. NVLink → fabric is the execution path. etcd and NKP coordinate the desired state; Prism shows the fleet.</blockquote>
+  </section>
+
+  <section id="operations">
+    <h2>Scaling, ownership, and failure modes</h2>
+    <p class="lede">Autoscaling must react before users see a queue, but inference capacity can take tens of seconds or minutes to become usable.</p>
+    <p>A controller that observes only GPU utilization is late and sometimes wrong: decode can be bandwidth-bound while utilization looks moderate, and a queue can rise while new replicas are still loading. Use a small set of leading and confirming signals, and require a model-level readiness gate before routing traffic.</p>
+    <table class="decision-table" aria-label="Autoscaling signals and actions">
+      <thead><tr><th>Signal</th><th>Interpretation</th><th>Action</th><th>Where it runs</th></tr></thead>
+      <tbody>
+        <tr><td>Queue depth / oldest request age</td><td data-label="Interpretation">Demand is exceeding admitted service capacity now.</td><td data-label="Action">Route to ready headroom; add or prewarm replicas; shed work if the SLO cannot be protected.</td><td data-label="Where">Gateway policy plus NKP autoscaler</td></tr>
+        <tr><td>p99 TTFT</td><td data-label="Interpretation">Queueing, prefill saturation, or a degraded replica is reaching users.</td><td data-label="Action">Add prefill capacity, rebalance, or isolate the slow replica after phase-level diagnosis.</td><td data-label="Where">Service telemetry feeding NKP policy</td></tr>
+        <tr><td>Decode TPS / ITL</td><td data-label="Interpretation">Per-request generation speed is falling.</td><td data-label="Action">Reduce decode batch pressure, add decode replicas, or investigate HBM/fabric contention.</td><td data-label="Where">Serving metrics plus NKP policy</td></tr>
+        <tr><td>HBM allocated / live KV tokens</td><td data-label="Interpretation">The replica is approaching its safe concurrency envelope.</td><td data-label="Action">Stop admission to that replica, cap context, or expand the decode pool before OOM.</td><td data-label="Where">Model-server telemetry and router</td></tr>
+        <tr><td>GPU utilization</td><td data-label="Interpretation">Useful corroboration, but not a user SLO and not proof of decode efficiency.</td><td data-label="Action">Use with queue, throughput, and bandwidth counters; never scale on it alone.</td><td data-label="Where">GPU telemetry feeding platform dashboards</td></tr>
+        <tr><td>Ready replicas minus demand</td><td data-label="Interpretation">Warm-pool margin is shrinking before a spike or rollout.</td><td data-label="Action">Stage weights and initialize additional capacity ahead of traffic.</td><td data-label="Where">NKP controller / autoscaler</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="subhead">Failure modes worth designing before launch</h3>
+    <div class="stack">
+      <div class="stack-row"><b>HBM OOM during long-context prefill</b><p><strong>Infra implication:</strong> enforce per-request context and per-replica live-token limits at admission; monitor KV allocation, not only request count.</p></div>
+      <div class="stack-row"><b>NCCL or collective timeout</b><p><strong>Infra implication:</strong> a tensor-parallel replica is one synchronous failure domain; capture rank-level timing and drain the entire replica when one participant degrades.</p></div>
+      <div class="stack-row"><b>Tensor-parallel straggler</b><p><strong>Infra implication:</strong> a single slow GPU, NUMA path, or link stretches every collective; topology-aware placement and per-rank telemetry are required.</p></div>
+      <div class="stack-row"><b>Noisy neighbor on the shared fabric</b><p><strong>Infra implication:</strong> collective and KV-transfer traffic need measurable capacity, isolation, and maintenance coordination with other east-west workloads.</p></div>
+      <div class="stack-row"><b>etcd quorum loss</b><p><strong>Infra implication:</strong> existing workers may continue serving, but desired-state changes and rollouts can freeze; keep payloads out of etcd and test control-plane recovery separately.</p></div>
+      <div class="stack-row"><b>Thundering-herd cold start</b><p><strong>Infra implication:</strong> a deploy or node loss can make many replicas fetch the same hundreds of gigabytes; use warm capacity, staged rollout, local caching, and storage-load limits.</p></div>
+      <div class="stack-row"><b>Partial model hydration</b><p><strong>Infra implication:</strong> never advertise readiness after the container starts; require digest verification, complete HBM load, distributed-group formation, and an inference health check.</p></div>
+      <div class="stack-row"><b>Node drain crosses the SLO margin</b><p><strong>Infra implication:</strong> maintenance capacity is part of steady-state sizing. A replica that spans nodes may disappear as a unit when one node drains.</p></div>
+    </div>
+    <p>The operational test is not “Can Kubernetes restart it?” It is “Can the fleet replace this replica, move its bytes, reform its communication group, and absorb traffic without violating the user-facing SLO?”</p>
+  </section>
+
+  <section id="artifacts">
+    <h2>Artifacts: what training leaves behind</h2>
+    <p>A trained model is not one file. A typical release directory includes architecture and generation configuration, tokenizer assets, documentation, and weight shards. A simplified layout looks like this:</p>
+    <div class="file-tree" aria-label="Example model artifact directory"><span class="root">model-v2/</span><br>├── config.json <span class="note"># architecture and dimensions</span><br>├── generation_config.json <span class="note"># decoding defaults</span><br>├── model-00001-of-000xx.safetensors<br>├── model.safetensors.index.json <span class="note"># shard map</span><br>├── tokenizer.json / tokenizer_config.json<br>├── special_tokens_map.json<br>└── README.md <span class="note"># model card and usage notes</span></div>
+    <p>Training checkpoints are larger still. Besides one copy of the weights, Adam-family optimization commonly maintains first- and second-moment state—roughly two additional model-sized sets—plus scheduler and random-number-generator state. The shorthand is <strong>≈1× weights + ≈2× optimizer state</strong>, before format and precision details. Checkpoint storage can therefore dwarf the final serving artifact.</p>
+    <p><strong>LoRA adapters</strong> take the opposite approach: keep a frozen base model and store small learned matrices per task. The adapter is cheap to copy and promote, but it is meaningful only alongside the exact compatible base model.</p>
+    <p>Serving then creates its own artifacts. Chat history is application state. Prefix-cache snapshots or reusable KV blocks are performance state. Logs, traces, evaluation outputs, and safety records are operational state. “Stateless inference” usually means the worker can be replaced—not that the surrounding system has no state.</p>
+    <table class="decision-table" aria-label="Inference artifact lifecycle">
+      <thead><tr><th>Artifact</th><th>Producer</th><th>Consumer</th><th>Storage tier</th><th>Retention policy</th></tr></thead>
+      <tbody>
+        <tr><td>Weight shards</td><td data-label="Producer">Training / conversion pipeline</td><td data-label="Consumer">Model loader and serving workers</td><td data-label="Storage tier">Objects → node NVMe → HBM</td><td data-label="Retention">Immutable, versioned; retain every approved release and rollback target.</td></tr>
+        <tr><td>Configs + tokenizer</td><td data-label="Producer">Training / packaging pipeline</td><td data-label="Consumer">Loader, gateway, evaluators, and clients</td><td data-label="Storage tier">Objects beside the matching weights; Files while being edited</td><td data-label="Retention">Version-lock to the model digest; never promote independently by accident.</td></tr>
+        <tr><td>Training checkpoints</td><td data-label="Producer">Trainer</td><td data-label="Consumer">Resume, recovery, and analysis jobs</td><td data-label="Storage tier">Objects</td><td data-label="Retention">Keep recovery milestones; expire dense intermediate steps after the recovery window.</td></tr>
+        <tr><td>LoRA adapters</td><td data-label="Producer">Fine-tuning pipeline</td><td data-label="Consumer">Adapter-aware serving workers</td><td data-label="Storage tier">Objects</td><td data-label="Retention">Version with an explicit base-model dependency; retain approved and rollback versions.</td></tr>
+        <tr><td>Prefix-cache snapshots</td><td data-label="Producer">Serving or cache-management layer</td><td data-label="Consumer">Compatible serving workers</td><td data-label="Storage tier">Hot local NVMe; Objects only when durable reuse is worth load cost</td><td data-label="Retention">Short TTL; invalidate on model, tokenizer, template, or cache-format change.</td></tr>
+        <tr><td>Chat history</td><td data-label="Producer">Application layer</td><td data-label="Consumer">Application and prompt assembler</td><td data-label="Storage tier">Objects for durable records; Files only for approved shared exports</td><td data-label="Retention">Defined by application, privacy, and audit requirements—not by model-server cache policy.</td></tr>
+        <tr><td>Logs, traces, eval outputs</td><td data-label="Producer">Gateway, platform, and model workers</td><td data-label="Consumer">Operators, evaluators, and audit workflows</td><td data-label="Storage tier">Objects; selected shared reports on Files</td><td data-label="Retention">Tier by diagnostic and compliance value; redact or exclude sensitive prompt content.</td></tr>
+      </tbody>
+    </table>
+    <p>The clean promotion pattern is to keep each model build immutable in Objects and move a small mutable pointer in etcd. Promotion becomes a metadata flip from one content-addressed or versioned artifact to another; rollback is the reverse flip. Workers resolve the pointer, stage the referenced bytes, verify them, and only then take traffic.</p>
+  </section>
+
+  <section id="files-objects">
+    <h2>Files vs Objects: the one rule</h2>
+    <div class="rules">
+      <article class="rule"><h3>Nutanix Files</h3><span class="mode">SMB / NFS · mounted hierarchy</span><p>Files supports folders, in-place edits, byte-range locking, and multiple writers coordinating through familiar filesystem semantics. It is the shared working space.</p></article>
+      <article class="rule"><h3>Nutanix Objects</h3><span class="mode">S3 API · buckets and keys</span><p>Objects fits write-once/read-many blobs addressed over HTTPS. Versioning and lifecycle policy make it the durable registry, while application logic owns concurrency.</p></article>
+    </div>
+    <blockquote class="pull">If your app speaks S3, it wants Objects; if a human or tool needs a mounted drive with folders and in-place edits, it wants Files.</blockquote>
+    <div class="placement">Blobs in Objects · shared files in Files · hot bytes on NVMe · pointers in etcd</div>
+  </section>
+
+  <section id="capacity">
+    <h2>Capacity-planning checklist</h2>
+    <p class="lede">A defensible deployment plan can be reviewed as eight linked calculations. If one input is unknown, mark it as a measurement task rather than filling the gap with a vendor peak number.</p>
+    <ol class="numbered">
+      <li><div><b>Choose the exact model build.</b> Record architecture, total and active parameters, precision, context limit, attention design, license, weight format, and immutable artifact digest. “405B” is not enough if one build is BF16 and another FP8.</div></li>
+      <li><div><b>Compute the resident weight footprint.</b> Multiply parameters by bytes per parameter, then add measured runtime reserve for graph state, kernels, temporary buffers, and fragmentation. Round to a supported GPU topology—not merely the mathematical minimum.</div></li>
+      <li><div><b>Budget KV cache from context × concurrency.</b> Calculate bytes per token from the architecture, then multiply by the maximum admitted live tokens per replica. State context limits and the scheduling policy that enforces them.</div></li>
+      <li><div><b>Select GPU and node count.</b> Fit weights + KV + reserve into usable HBM. Prefer the fewest high-bandwidth domains that meet latency; record the spare capacity required for maintenance and failover.</div></li>
+      <li><div><b>Validate the fabric.</b> Map tensor, pipeline, expert, and KV-transfer traffic onto actual links. Benchmark the intended topology under contention, and identify every synchronous failure domain.</div></li>
+      <li><div><b>Size storage and the cold path.</b> Budget durable capacity for weights, checkpoints, adapters, snapshots, and retention copies. Divide rollout bytes by required rollout time to derive aggregate read throughput; include concurrent hydrations.</div></li>
+      <li><div><b>Reserve power and cooling.</b> Use node-level maximum envelopes plus switching, storage, and facility overhead. Check rack density, power feeds, cooling, and maintenance capacity before treating GPU inventory as deployable.</div></li>
+      <li><div><b>Set the warm-pool and rollout policy.</b> Compare demand growth and failure-recovery objectives with measured hydrate-and-initialize time. Pre-stage enough ready capacity to cover that gap, then canary, health-gate, and roll forward in bounded waves.</div></li>
+    </ol>
+    <table class="decision-table" aria-label="Capacity planning outputs">
+      <thead><tr><th>Review output</th><th>Question it must answer</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Replica shape</td><td data-label="Question">How many GPUs and nodes form one failure domain?</td><td data-label="Evidence">Weight + KV calculation and topology benchmark.</td></tr>
+        <tr><td>Fleet size</td><td data-label="Question">How many ready replicas satisfy peak load at the target utilization and p99?</td><td data-label="Evidence">Request-shape distribution and end-to-end load test.</td></tr>
+        <tr><td>Recovery margin</td><td data-label="Question">What demand survives one replica, node, or rack loss?</td><td data-label="Evidence">Failure injection and capacity held outside the failed domain.</td></tr>
+        <tr><td>Rollout envelope</td><td data-label="Question">How many replicas can hydrate simultaneously without starving production?</td><td data-label="Evidence">Measured Objects → NVMe → HBM throughput under load.</td></tr>
+        <tr><td>Facility envelope</td><td data-label="Question">Can the planned topology be powered and cooled continuously?</td><td data-label="Evidence">Node, network, and storage power budgets plus facility limits.</td></tr>
+      </tbody>
+    </table>
+    <blockquote class="pull">The final unit of capacity is not a GPU. It is a healthy replica, loaded with the right artifact, inside a tested failure domain, with enough HBM and fabric headroom to meet the SLO.</blockquote>
+  </section>
+
+  <section id="together">
+    <h2>Putting it together: one operating model</h2>
+    <p>A request enters through a gateway and lands on NKP-managed GPU capacity. In a disaggregated design, a compute-oriented prefill pool builds KV state and hands it across a fast fabric to a bandwidth-oriented decode pool; the two pools can be scheduled and scaled independently. Approved weights travel from Objects through node-local NVMe into HBM. Shared human-edited material belongs on Files, etcd carries only small desired-state pointers, and Prism provides the fleet view.</p>
+    <div class="pipeline" aria-label="Reference inference architecture">
+      <svg viewBox="0 0 720 320" role="img" aria-labelledby="rt rd"><title id="rt">Reference inference architecture on Nutanix</title><desc id="rd">A request flows through gateway, prefill and decode pools. Models move from Objects through local NVMe into GPU memory, while Files, etcd, and Prism serve distinct roles.</desc><defs><marker id="arrow2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="var(--indigo)"/></marker></defs>
+        <rect x="18" y="45" width="96" height="58" rx="8" class="s-box"/><text x="66" y="79" text-anchor="middle" class="s-title">Request</text>
+        <rect x="142" y="45" width="108" height="58" rx="8" class="s-box"/><text x="196" y="79" text-anchor="middle" class="s-title">Gateway</text>
+        <rect x="284" y="24" width="132" height="100" rx="8" class="s-main"/><text x="350" y="61" text-anchor="middle" class="s-title">Prefill pool</text><text x="350" y="84" text-anchor="middle" class="s-small">NKP · compute</text>
+        <rect x="454" y="24" width="132" height="100" rx="8" class="s-main"/><text x="520" y="61" text-anchor="middle" class="s-title">Decode pool</text><text x="520" y="84" text-anchor="middle" class="s-small">NKP · bandwidth</text>
+        <rect x="620" y="45" width="82" height="58" rx="8" class="s-good"/><text x="661" y="79" text-anchor="middle" class="s-title">Tokens</text>
+        <path d="M114 74H134M250 74H276M416 74H446M586 74H612" class="s-line" marker-end="url(#arrow2)"/><text x="435" y="58" text-anchor="middle" class="s-small">KV</text>
+        <rect x="45" y="184" width="116" height="62" rx="8" class="s-good"/><text x="103" y="210" text-anchor="middle" class="s-title">Objects</text><text x="103" y="229" text-anchor="middle" class="s-small">model registry</text>
+        <rect x="195" y="184" width="116" height="62" rx="8" class="s-box"/><text x="253" y="210" text-anchor="middle" class="s-title">NVMe</text><text x="253" y="229" text-anchor="middle" class="s-small">staged weights</text>
+        <rect x="345" y="184" width="116" height="62" rx="8" class="s-main"/><text x="403" y="210" text-anchor="middle" class="s-title">GPU HBM</text><text x="403" y="229" text-anchor="middle" class="s-small">weights + cache</text>
+        <path d="M161 215H187M311 215H337M403 184V132" class="s-line" marker-end="url(#arrow2)"/>
+        <rect x="495" y="174" width="90" height="42" rx="8" class="s-box"/><text x="540" y="200" text-anchor="middle" class="s-title">Files</text>
+        <rect x="604" y="174" width="90" height="42" rx="8" class="s-box"/><text x="649" y="200" text-anchor="middle" class="s-title">etcd</text>
+        <rect x="495" y="232" width="199" height="42" rx="8" class="s-good"/><text x="594" y="258" text-anchor="middle" class="s-title">Prism · fleet visibility</text>
+        <text x="360" y="302" text-anchor="middle" class="s-small">Each tier has one job; none is a universal bucket.</text>
+      </svg>
+    </div>
+    <p>Warm GPU capacity keeps sudden demand off the cold-start path. AHV-hosted ancillary services and NKP-managed inference pools can share the same storage and observability foundation, while policy decides whether eligible overflow remains on-premises or uses public-cloud GPU capacity.</p>
+  </section>
+
+  <section id="thesis">
+    <h2>Inference engineering is infrastructure engineering</h2>
+    <p class="lede">Choosing a model is choosing the physical shape of the service.</p>
+    <div class="thesis-chain"><span>parameter count</span> → GPU count → node count → NVLink domains → inter-node fabric → power, cooling &amp; floor space</div>
+    <div class="thesis-grid">
+      <article><b>≤≈20.4 kW</b><p>Maximum whole-system IT load across two occupied DGX H100-class nodes; cooling/PUE is additional.</p></article>
+      <article><b>≈1 TB</b><p>Kimi K2 FP8 weight data crossing Objects → NVMe → HBM for every uncached replica load.</p></article>
+      <article><b>≈512 GB</b><p>KV cache for eight ≈128K-token Llama 405B sessions at the ≈500 KB/token planning value.</p></article>
+    </div>
+    <p>That is the core argument. Cold start is a storage and network throughput problem. Expert parallelism is a fabric problem. Long context multiplied by concurrency is an HBM capacity problem. Replica density is a power, cooling, and scheduling problem. The runtime exposes these pressures; infrastructure determines whether the service survives them.</p>
+  </section>
+
+  <section id="next">
+    <h2>Discussion questions</h2>
+    <p>The presentation will start with the request path and roofline mental model, move into sizing and failure-domain math, trace model bytes from Objects to HBM, and show where NKP, AHV, Flow, Files, Prism, and the network fabric enter the operating picture. Part 1 and Part 3 of the companion series provide the deeper visual references; Part 2 remains the runtime-optimization follow-up.</p>
+    <div class="question"><b>1 · CAPACITY</b>Which model footprint can our current cluster host with measured operational headroom after weights, KV cache, one failure domain, and maintenance reserve—not just nominal aggregate HBM?</div>
+    <div class="question"><b>2 · BOTTLENECK</b>For that footprint, what becomes limiting first under the target request distribution: HBM capacity, HBM bandwidth, the inter-node fabric, storage hydration throughput, or facility power?</div>
+    <div class="question"><b>3 · RECOVERY</b>After a node loss or model rollout, how many replicas can hydrate concurrently, how long until they pass model-level health checks, and what warm capacity protects p99 TTFT during that interval?</div>
+  </section>
+
+  <section id="glossary">
+    <h2>Small glossary</h2>
+    <dl class="glossary">
+      <div><dt>Prefill</dt><dd>Parallel processing of the input prompt that builds initial attention state.</dd></div>
+      <div><dt>Decode</dt><dd>The serial loop that generates one token at a time.</dd></div>
+      <div><dt>TTFT</dt><dd>Time to first token: queueing plus prefill latency as the user experiences it.</dd></div>
+      <div><dt>TPS / ITL</dt><dd>Tokens per second, or inter-token latency, during decode.</dd></div>
+      <div><dt>Roofline model</dt><dd>A performance model that relates arithmetic intensity to the ceilings imposed by memory bandwidth and peak compute.</dd></div>
+      <div><dt>Serving framework</dt><dd>The service layer that queues, batches, schedules, and executes model requests on accelerators.</dd></div>
+      <div><dt>KV cache</dt><dd>Stored key/value projections of prior tokens, reused by later decode steps.</dd></div>
+      <div><dt>Quantization</dt><dd>Representing weights or activations with fewer bits to reduce memory and traffic.</dd></div>
+      <div><dt>Tensor parallelism</dt><dd>Splitting a layer’s tensor operations across tightly connected accelerators.</dd></div>
+      <div><dt>MoE</dt><dd>Mixture-of-Experts: sparse layers that route each token to a subset of expert MLPs.</dd></div>
+      <div><dt>Speculative decoding</dt><dd>Drafting tokens with a small model and verifying them in parallel with a larger one.</dd></div>
+      <div><dt>Cold start</dt><dd>The path from an unavailable replica to one with initialized weights ready in HBM.</dd></div>
+      <div><dt>LoRA</dt><dd>Small task-specific low-rank adapter weights applied to a frozen base model.</dd></div>
+      <div><dt>SafeTensors</dt><dd>A tensor serialization format commonly used for sharded model weights.</dd></div>
+      <div><dt>Disaggregation</dt><dd>Running prefill and decode on separately sized worker pools.</dd></div>
+      <div><dt>Warm pool</dt><dd>Ready, already-loaded inference capacity held to absorb demand without waiting for a full model cold start.</dd></div>
+      <div><dt>SM</dt><dd>Streaming multiprocessor: the GPU execution unit that contains CUDA and Tensor Cores.</dd></div>
+      <div><dt>HBM</dt><dd>High-bandwidth memory attached to the accelerator; the capacity pool that must hold weights, caches, and runtime overhead.</dd></div>
+      <div><dt>GQA / MLA</dt><dd>Attention designs that reduce KV-cache size by storing fewer or compressed key/value channels.</dd></div>
+      <div><dt>Expert parallelism</dt><dd>Distributing MoE experts across accelerators; token routing then becomes a fabric operation.</dd></div>
+      <div><dt>Pipeline parallelism</dt><dd>Assigning consecutive model-layer stages to different accelerators and passing activations between them.</dd></div>
+      <div><dt>Data parallelism</dt><dd>Running complete model replicas that independently serve different requests.</dd></div>
+      <div><dt>Collective</dt><dd>A coordinated multi-rank communication operation such as all-reduce or all-to-all.</dd></div>
+      <div><dt>Live tokens</dt><dd>The prompt and generated tokens currently occupying KV-cache capacity across admitted sequences.</dd></div>
+      <div><dt>Ridge point</dt><dd>The roofline balance where the bandwidth slope meets the compute ceiling.</dd></div>
+      <div><dt>NVLink domain</dt><dd>The set of GPUs joined by NVIDIA’s high-bandwidth accelerator interconnect, typically inside one server.</dd></div>
+      <div><dt>etcd</dt><dd>A consistent control-plane key-value store for small cluster state and pointers—not blobs.</dd></div>
+    </dl>
+  </section>
+</main>
+<footer>
+  <div class="shell">
+    <strong>Companion visual guides</strong>
+    <div class="guides" aria-label="Companion guide titles">
+      <div class="guide"><b>Part 1</b> · Foundations &amp; Hardware<span class="slug">inference-engineering-diagrams-part-1</span></div>
+      <div class="guide"><b>Part 2</b> · Optimization &amp; Production<span class="slug">inference-engineering-diagrams-part-2</span></div>
+      <div class="guide"><b>Part 3</b> · Nutanix in the Inference Stack<span class="slug">inference-engineering-diagrams-part-3</span></div>
+      <div class="guide"><b>Part 4</b> · Artifacts &amp; Storage<span class="slug">inference-engineering-artifacts-guide-part-4</span></div>
+    </div>
+    <p>Open these titles from the team’s Muse Spaces library. Public URLs were not embedded because the companion guides have not been shared as links.</p>
+    <p>Original post created for internal team education. Inference concepts from <cite>Inference Engineering</cite> by Philip Kiely (Baseten Books, 2026).</p>
+  </div>
+</footer>
+<script>
+  (function(){
+    var bar=document.querySelector('.progress');
+    function update(){var max=document.documentElement.scrollHeight-innerHeight;bar.style.width=(max>0?Math.min(100,scrollY/max*100):0)+'%';}
+    addEventListener('scroll',update,{passive:true});addEventListener('resize',update);update();
+  }());
+</script>
+</body>
+</html>
