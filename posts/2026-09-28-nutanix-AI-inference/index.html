@@ -7,7 +7,7 @@
   <title>Inference Is an Infrastructure Problem: From GPT-2 on a Laptop to Nutanix Enterprise AI</title>
   <meta name="author" content="Jhon Cordeiro" />
   <meta name="date" content="2026-09-28" />
-  <meta name="description" content="Every large-scale inference problem already exists in a 124M-parameter GPT-2 script. This post scales that script to trillion-parameter models, shows the memory and bandwidth math that decides GPU and node counts, and maps each pressure onto the Nutanix stack: Astra, COCI, AHV, NKP, NAI, Files, and Objects." />
+  <meta name="description" content="The core problems of large-scale inference already exist in a 124M-parameter GPT-2 script. This post scales that script to trillion-parameter models, shows the memory and bandwidth math that decides GPU and node counts, and maps each pressure onto the Nutanix stack: Astra, COCI, AHV, NKP, NAI, Files, and Objects." />
   <meta name="keywords" content="inference, llm, gpu, capacity-planning, nai, nkp, project-astra" />
   <meta name="post:status" content="draft" />
   <meta name="post:published_url" content="" />
@@ -49,7 +49,7 @@
     ul,ol{margin:0 0 18px;padding-left:24px}li{margin:4px 0}
     .lede{font-size:1.12rem;color:var(--ink)}
     .note{margin:24px 0;padding:18px 20px;background:var(--soft);border-top:2px solid var(--indigo);font-size:.94rem}
-    .caveat{margin:18px 0 0;color:var(--muted);font-size:.84rem;line-height:1.55}
+    .caveat{margin:18px 0;color:var(--muted);font-size:.84rem;line-height:1.55}
     .pull{margin:30px 0;padding:18px 0 18px 25px;border-left:4px solid var(--indigo);color:var(--ink);font-size:clamp(1.15rem,3vw,1.4rem);font-weight:700;line-height:1.45}
     code{font:.88em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);padding:.1em .35em;border-radius:4px}
     pre{margin:22px 0;padding:18px 20px;background:var(--code);color:var(--code-text);font:13.5px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto}
@@ -81,7 +81,7 @@
     <p class="series">Inference engineering at Nutanix · Part 1</p>
     <h1>Inference is an infrastructure problem</h1>
     <p class="dek">From GPT-2 on a laptop to Nutanix Enterprise AI: the memory and bandwidth math that decides GPU and node counts, and where each pressure lands in the Nutanix stack.</p>
-    <div class="meta"><span>Jhon Cordeiro</span><span>September 28, 2026</span><span>≈20 min read</span><span>Draft</span></div>
+    <div class="meta"><span>Jhon Cordeiro</span><span>September 28, 2026</span><span>≈16 min read</span><span>Draft</span></div>
   </div>
 </header>
 
@@ -92,7 +92,7 @@
     <li><a href="#gpt2">Start small: GPT-2 on a laptop</a></li>
     <li><a href="#phases">Two phases, two bottlenecks</a></li>
     <li><a href="#gpus">The two numbers that describe a GPU</a></li>
-    <li><a href="#math">Do the math: model footprints</a></li>
+    <li><a href="#math">Do the math: what today's open models require</a></li>
     <li><a href="#kv">KV cache: the concurrency multiplier</a></li>
     <li><a href="#nutanix">Where Nutanix fits</a></li>
     <li><a href="#gpu-farm">Field notes: our own GPU Farm</a></li>
@@ -111,7 +111,7 @@
     <p>The central claim of this post is simple: <strong>choosing a model is choosing the physical shape of the service.</strong> Parameter count determines GPU count; GPU count determines node count; node count determines whether the interconnect, the storage path, and the power budget sit on the critical path.</p>
     <p>We'll get there in three steps:</p>
     <ol>
-      <li>Run GPT-2 on a laptop, where every inference concept fits in about 130 lines of Python.</li>
+      <li>Run GPT-2 on a laptop, where every inference concept fits in about 140 lines of Python.</li>
       <li>Scale the same concepts to today's open-weight models and do the memory math.</li>
       <li>Map each resulting pressure onto the Nutanix stack that turns GPU servers into governed inference endpoints.</li>
     </ol>
@@ -120,7 +120,7 @@
 
   <section id="gpt2">
     <h2>Start small: GPT-2 on a laptop</h2>
-    <p class="lede">Every large-scale inference problem already exists in a 124M-parameter model. It is just too small to hurt.</p>
+    <p class="lede">The core problems of large-scale inference already exist in a 124M-parameter model. They are just too small to hurt.</p>
     <p>The companion script, <a href="code/gpt2-inference.py"><code>code/gpt2-inference.py</code></a>, runs GPT-2 with no serving framework: a hand-written byte-pair-encoding (BPE) tokenizer, an explicit transformer forward pass, top-p sampling, and a generation loop that reports its own timing.</p>
     <pre><code>pip install torch safetensors
 python code/gpt2-inference.py   # first run downloads ≈550 MB into ./gpt2-cache</code></pre>
@@ -130,7 +130,7 @@ python code/gpt2-inference.py   # first run downloads ≈550 MB into ./gpt2-cach
       <table>
         <thead><tr><th>Script step</th><th>On a laptop</th><th>At production scale</th></tr></thead>
         <tbody>
-          <tr><td><code>download()</code></td><td>Fetches ≈550 MB of FP32 weights plus small config and tokenizer files.</td><td>Importing a model into Nutanix Enterprise AI (NAI): hundreds of GB to ≈1 TB per model, read again by every new replica.</td></tr>
+          <tr><td><code>download()</code></td><td>Fetches the ≈550 MB FP32 checkpoint plus small config and tokenizer files.</td><td>Importing a model into Nutanix Enterprise AI (NAI): hundreds of GB to ≈1 TB per model, read again by every new replica.</td></tr>
           <tr><td><code>Tokenizer.encode</code></td><td>Turns text into token IDs using the model's own vocabulary and merge files.</td><td>Request ingress. Tokenizer files are version-locked to the weights; a mismatch silently corrupts output.</td></tr>
           <tr><td>First <code>forward(ids)</code></td><td>Processes the whole prompt at once. This is <strong>prefill</strong>.</td><td>Compute-bound. Sets time to first token (TTFT).</td></tr>
           <tr><td><code>generate()</code> loop</td><td>One token per iteration, appended and fed back. This is <strong>decode</strong>.</td><td>Memory-bandwidth-bound. Sets tokens per second.</td></tr>
@@ -139,19 +139,19 @@ python code/gpt2-inference.py   # first run downloads ≈550 MB into ./gpt2-cach
         </tbody>
       </table>
     </div>
-    <p>The script deliberately omits the most important production optimization: <strong>it has no KV cache.</strong> Every decode step re-runs attention over the entire sequence. A production engine such as vLLM stores each layer's attention keys and values (the "KV cache") once and processes only the newest token. That trade saves recomputation and spends GPU memory instead. Most of the rest of this post is about paying that memory bill.</p>
+    <p>The script deliberately omits the most important production optimization: <strong>it has no KV cache.</strong> Every decode step re-runs attention over the entire sequence. A production engine such as vLLM stores each layer's attention keys and values (the "KV cache") once and processes only the newest token. That trade saves recomputation and spends GPU memory instead. It also means the script's "decode" rate falls as the sequence grows, while a cached engine's stays roughly flat. Most of the rest of this post is about paying that memory bill.</p>
     <p>It's worth doing the arithmetic for GPT-2 once:</p>
     <ul>
       <li><strong>Weights:</strong> 124M parameters × 4 bytes (FP32) ≈ 500 MB. Fits in laptop RAM with room to spare.</li>
       <li><strong>KV cache per token:</strong> 2 (keys and values) × 12 layers × 12 heads × 64 dims × 4 bytes ≈ <strong>72 KB/token</strong>, or ≈72 MB for a full 1,024-token context.</li>
     </ul>
-    <p>Hold on to that ≈72 KB/token figure. A trillion-parameter model later in this post stores roughly the same amount per token. The per-token cost barely changed. What changed are three multipliers:</p>
+    <p>Hold on to that ≈72 KB/token figure. Kimi K2, a trillion-parameter model later in this post, stores about the same amount per token; Llama 3.1 405B stores about seven times as much. Either way, the per-token figure is not what explodes. Three things around it do:</p>
     <ul>
       <li><strong>Context length:</strong> 128K tokens instead of 1K.</li>
       <li><strong>Concurrency:</strong> thousands of live sessions instead of one.</li>
       <li><strong>Weights:</strong> they no longer fit on one device.</li>
     </ul>
-    <p>Those three multipliers are why inference becomes an infrastructure problem.</p>
+    <p>Those three are why inference becomes an infrastructure problem.</p>
   </section>
 
   <section id="phases">
@@ -177,7 +177,7 @@ python code/gpt2-inference.py   # first run downloads ≈550 MB into ./gpt2-cach
       </table>
     </div>
     <p>Decode is ≈97% of model time. Making prefill faster improves the first visible token (≈500 ms here) but barely changes when the answer finishes. That is why we write two budgets, a <strong>first-token budget</strong> and a <strong>completion budget</strong>, and track p50 and p99 for each. Averages hide queueing; the p99 tail is where users feel it.</p>
-    <blockquote class="pull">The average tells you the machine is healthy. The tail tells you whether users agree.</blockquote>
+    <p class="pull">The average tells you the machine is healthy. The tail tells you whether users agree.</p>
   </section>
 
   <section id="gpus">
@@ -203,7 +203,7 @@ python code/gpt2-inference.py   # first run downloads ≈550 MB into ./gpt2-cach
         <thead><tr><th>GPU</th><th>Memory</th><th>Bandwidth</th><th>GPU-to-GPU link</th></tr></thead>
         <tbody>
           <tr><td>NVIDIA L40S</td><td>48 GB GDDR6</td><td>≈0.86 TB/s</td><td>PCIe Gen4, no NVLink</td></tr>
-          <tr><td>NVIDIA A100 80GB</td><td>80 GB HBM2e</td><td>≈2.0 TB/s</td><td>NVLink (SXM)</td></tr>
+          <tr><td>NVIDIA A100 80GB</td><td>80 GB HBM2e</td><td>≈2.0 TB/s</td><td>NVLink 600 GB/s (SXM)</td></tr>
           <tr><td>NVIDIA H100</td><td>80 GB HBM3</td><td>≈3.35 TB/s</td><td>NVLink 900 GB/s (SXM)</td></tr>
           <tr><td>NVIDIA H200</td><td>141 GB HBM3e</td><td>≈4.8 TB/s</td><td>NVLink 900 GB/s</td></tr>
           <tr><td>NVIDIA B300</td><td>288 GB HBM3e</td><td>≈8 TB/s</td><td>NVLink 5, 1.8 TB/s</td></tr>
@@ -230,24 +230,26 @@ node count      = ceil(GPUs ÷ 8 per node)</code></pre>
           <tr><td>gpt-oss-120b</td><td>≈117B / ≈5.1B (MoE)</td><td>≈117 GB</td><td>2 / 2</td><td>1</td></tr>
           <tr><td>Qwen3-235B-A22B</td><td>≈235B / ≈22B (MoE)</td><td>≈235 GB</td><td>4 / 4</td><td>1</td></tr>
           <tr><td>Llama 3.1 405B</td><td>≈405B / ≈405B (dense)</td><td>≈405 GB</td><td>7 / 8</td><td>1</td></tr>
-          <tr><td>DeepSeek V3.1</td><td>≈671B / ≈37B (MoE)</td><td>≈685 GB</td><td>10 / 10</td><td>2</td></tr>
+          <tr><td>DeepSeek V3.1</td><td>≈671B / ≈37B (MoE)</td><td>≈685 GB</td><td>10 / 16</td><td>2</td></tr>
           <tr><td>Kimi K2</td><td>≈1T / ≈32B (MoE)</td><td>≈1 TB</td><td>15 / 16</td><td>2</td></tr>
         </tbody>
       </table>
     </div>
-    <p>Each row budgets one long sequence of KV cache on top of weights. For example, Llama 3.1 405B: (405 GB + ≈64 GB KV) ÷ 72 GB = 6.5, which rounds to 7 by capacity and to the published 8×H100 topology in practice.</p>
+    <p>Each row budgets one 128K-token sequence of KV cache on top of weights. For example, Llama 3.1 405B: (405 GB + ≈64 GB KV) ÷ 72 GB = 6.5, which rounds to 7 by capacity and to the published 8×H100 topology in practice.</p>
+    <p>The "provisioned" column rounds up to layouts serving frameworks actually run. The tensor-parallel degree has to divide the model's attention-head count, which for these models means a power of two. That is why DeepSeek's 10 becomes 16: two full nodes, not one and a quarter.</p>
+    <p class="caveat">gpt-oss-120b ships natively in MXFP4 (≈4.25 bits per expert weight, ≈65 GB on disk) and is designed to fit a single 80 GB GPU. It is shown at FP8 here only to keep the rows comparable.</p>
     <p>Two things stand out.</p>
     <p><strong>The MoE rule.</strong> Kimi K2 computes with ≈32B active parameters per token, but you provision memory for the whole trillion. Offloading experts to host memory or NVMe can cut GPU memory demand, but adds traffic and latency.</p>
     <p><strong>The one-to-two-node jump changes the problem.</strong> Once a replica spans two nodes, tensor collectives and expert routing leave the NVLink domain, placement consumes rack-level power (a fully populated DGX H100 is rated at ≈10.2 kW maximum), and any failure or drain operation moves a near-terabyte footprint.</p>
-    <p>The GPU choice changes the answer. On B300 (≈259 GB usable), Kimi K2 needs ceil(1,009 ÷ 259) = <strong>4 GPUs</strong>, which fit inside one 8-GPU NVLink domain. On RTX PRO 6000 (≈86 GB usable), it needs <strong>12 GPUs</strong> across two PCIe-only nodes: feasible on paper, but every collective crosses PCIe and the network.</p>
-    <blockquote class="pull">Choosing a GPU SKU really means choosing how many failure domains a replica spans.</blockquote>
+    <p>The GPU choice changes the answer. On B300 (≈259 GB usable), Kimi K2 needs ceil(1,009 ÷ 259) = <strong>4 GPUs</strong>, which fit inside one 8-GPU NVLink domain. On RTX PRO 6000 (≈86 GB usable), it needs <strong>12 GPUs</strong> by capacity, 16 in practice, across two PCIe-only nodes: feasible on paper, but every collective crosses PCIe and the network.</p>
+    <p class="pull">Choosing a GPU SKU really means choosing how many failure domains a replica spans.</p>
   </section>
 
   <section id="kv">
     <h2>KV cache: the concurrency multiplier</h2>
     <p class="lede">Weights decide whether one replica fits. KV cache decides how many requests that replica can serve at once.</p>
-    <p>Llama 3.1 405B stores ≈500 KB of KV cache per token in BF16. One full 128K-token session is ≈64 GB. Eight concurrent 128K sessions need <strong>≈512 GB of KV cache, more than the ≈405 GB of weights.</strong> Eight H100s offer 640 GB nominal, which cannot hold both. The model fits; the workload does not.</p>
-    <p>Models that use multi-head latent attention (MLA), such as DeepSeek V3.1 and Kimi K2, store a compressed representation instead, at roughly ≈70 KB/token (about GPT-2's figure). Eight 128K sessions then need ≈72 GB. Attention architecture is an infrastructure input, not just a model-quality detail.</p>
+    <p>Llama 3.1 405B stores ≈500 KB of KV cache per token in BF16. One full 128K-token session is ≈64 GB. Eight concurrent 128K sessions need <strong>≈512 GB of KV cache, more than the ≈405 GB of weights.</strong> Eight H100s offer 640 GB nominal, which cannot hold both. At 90% usable, they leave ≈170 GB after weights: room for just <strong>two</strong> full-length sessions per replica. The model fits; the workload does not.</p>
+    <p>Models that use multi-head latent attention (MLA), such as DeepSeek V3.1 and Kimi K2, store a compressed representation instead, at ≈70 KB/token (about GPT-2's figure). Eight 128K sessions then need ≈72 GB. Attention architecture is an infrastructure input, not just a model-quality detail.</p>
     <p>In practice, every deployment should state three numbers explicitly: the maximum admitted context, the maximum live tokens per replica, and the memory reserve that cannot be allocated to KV. Without them, a few long-context prompts can stall admission or crash a worker even when request count looks low.</p>
     <p>NAI 2.8 ships early versions of two KV features, both <strong>Tech Preview</strong>:</p>
     <ul>
@@ -261,13 +263,13 @@ node count      = ceil(GPUs ÷ 8 per node)</code></pre>
     <p class="lede">The model server is one process in a layered system. Nutanix contributes everything around it, and each product has a specific job.</p>
     <p>The umbrella that packages them into an AI Factory is <strong>Project Astra</strong>, whose promise is "user intent → ready-to-use GPU or inference service."</p>
     <pre><code>GPU servers
-  → Foundation Central + Nico     discover, health-check, image
+  → Foundation Central + NICo     discover, health-check, image
   → NIM (Nutanix Infra Manager)    claim nodes, build clusters
   → AHV + COCI                     GPU VMs on compute-only nodes
   → Prism Central projects         tenancy for GPUs and networks
   → NKP                            Kubernetes workload clusters
   → NAI                            model endpoints</code></pre>
-    <p>"NIM" here is Nutanix's infrastructure manager, not NVIDIA NIM inference microservices, which appear later inside NAI.</p>
+    <p><strong>NICo (NVIDIA Infra Controller)</strong> is NVIDIA's open-source bare-metal lifecycle manager. It discovers and validates hosts over Redfish, manages host firmware and BlueField DPUs, and monitors hardware health, so new GPU servers arrive as API-managed building blocks rather than hand-built machines. "NIM" here is Nutanix's infrastructure manager, not NVIDIA NIM inference microservices, which appear later inside NAI.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Component</th><th>Job in the inference stack</th></tr></thead>
@@ -314,12 +316,12 @@ node count      = ceil(GPUs ÷ 8 per node)</code></pre>
   <section id="takeaways">
     <h2>Takeaways</h2>
     <ul class="takeaways">
-      <li><strong>The per-token cost of inference barely changes with scale. Context length, concurrency, and model size are the multipliers</strong>, and they turn a laptop script into a hardware, storage, and network problem.</li>
+      <li><strong>The per-token KV footprint doesn't have to grow with model size. Context length, concurrency, and weights that outgrow one device are the multipliers</strong>, and they turn a laptop script into a hardware, storage, and network problem.</li>
       <li><strong>Prefill sets TTFT and is compute-bound; decode sets completion time and is bandwidth-bound.</strong> Budget and measure them separately, at p99.</li>
       <li><strong>Check both capacity and bandwidth</strong> for every model–GPU pair. A model can fit and still be too slow.</li>
       <li><strong>KV cache, not weights, usually limits concurrency.</strong> State admitted context and live-token limits per replica.</li>
       <li><strong>The GPU SKU decides how many failure domains a replica spans.</strong> Staying inside one NVLink domain is worth a lot.</li>
-      <li><strong>Cold start is a storage throughput problem.</strong> On NAI it runs through Files; measure it and keep warm capacity to cover it.</li>
+      <li><strong>Cold start is a load-pipeline problem.</strong> On NAI it runs through Files, but deserialization can dominate; measure the whole load and keep warm capacity to cover it.</li>
       <li><strong>Nutanix's stack is layered for a reason:</strong> Astra and COCI make GPUs exist, AHV attaches them, NKP schedules them, NAI turns them into endpoints, Files and Objects hold the bytes, and Prism Central shows the fleet.</li>
     </ul>
   </section>
@@ -343,6 +345,7 @@ node count      = ceil(GPUs ÷ 8 per node)</code></pre>
       <div><dt>HBM</dt><dd>High-bandwidth memory attached to a data-center GPU.</dd></div>
       <div><dt>MoE</dt><dd>Mixture-of-Experts; each token activates only a subset of the model's expert sub-networks.</dd></div>
       <div><dt>MLA / GQA</dt><dd>Attention designs that shrink the KV cache by storing compressed or fewer key/value channels.</dd></div>
+      <div><dt>NICo</dt><dd>NVIDIA Infra Controller, an open-source service suite for bare-metal discovery, firmware, DPU provisioning, and hardware health.</dd></div>
       <div><dt>NVLink</dt><dd>NVIDIA's high-bandwidth GPU-to-GPU interconnect, typically within one server.</dd></div>
       <div><dt>EPP</dt><dd>Endpoint picker from the Gateway API Inference Extension; in NAI, the llm-d scheduler.</dd></div>
       <div><dt>RWX</dt><dd>ReadWriteMany, a Kubernetes volume that many pods can mount at once.</dd></div>
@@ -352,8 +355,8 @@ node count      = ceil(GPUs ÷ 8 per node)</code></pre>
   <section id="sources" class="sources">
     <h2>Sources</h2>
     <p>Inference concepts from <cite>Inference Engineering</cite> by Philip Kiely (Baseten Books, 2026).</p>
-    <p>Public model and hardware references, checked September 24, 2026: <a href="https://huggingface.co/openai/gpt-oss-120b">OpenAI gpt-oss-120b model card</a> · <a href="https://huggingface.co/RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8">Llama 3.1 405B FP8 model card</a> · <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-qwen-qwen3-235b-a22b-2507.html">Qwen3-235B-A22B model details</a> · <a href="https://huggingface.co/deepseek-ai/DeepSeek-V3.1">DeepSeek V3.1 model card</a> · <a href="https://github.com/MoonshotAI/Kimi-K2/blob/main/tech_report.pdf">Kimi K2 technical report</a> · <a href="https://github.com/kvcache-ai/Mooncake">Mooncake serving architecture</a> · <a href="https://www.nvidia.com/en-us/data-center/h100/">NVIDIA H100 specifications</a>.</p>
-    <p>Internal Nutanix sources, checked September 28, 2026: NAI 2.8 Release Highlights and Technical FAQ · NAI Architecture onboarding guide · RA-2189 Agentic AI Factory Reference Architecture (draft) · FEAT-19395 Cluster Control Plane (COCI) design · Astra 1.0 design documents · "19 – AI Storage and KV Cache Offloading" · Nutanix Unified Storage and Objects performance material · GPU Farm, TaaS Phase 3, and Astra–IT RTX6000 pages. Tech Preview and roadmap items are labeled as such; confirm current status before using them outside the team.</p>
+    <p>Public model and hardware references, checked September 24, 2026: <a href="https://huggingface.co/openai/gpt-oss-120b">OpenAI gpt-oss-120b model card</a> · <a href="https://huggingface.co/RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8">Llama 3.1 405B FP8 model card</a> · <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-qwen-qwen3-235b-a22b-2507.html">Qwen3-235B-A22B model details</a> · <a href="https://huggingface.co/deepseek-ai/DeepSeek-V3.1">DeepSeek V3.1 model card</a> · <a href="https://github.com/MoonshotAI/Kimi-K2/blob/main/tech_report.pdf">Kimi K2 technical report</a> · <a href="https://www.nvidia.com/en-us/data-center/h100/">NVIDIA H100 specifications</a>. Checked September 28, 2026: <a href="https://docs.nvidia.com/infra-controller/documentation/overview/what-is-nico">What is NICo? (NVIDIA Infra Controller documentation)</a>.</p>
+    <p>Internal Nutanix sources, checked September 28, 2026: NAI 2.8 Release Highlights and Technical FAQ · NAI Architecture onboarding guide · RA-2189 Agentic AI Factory Reference Architecture (draft) · FEAT-19395 Cluster Control Plane (COCI) design · Astra 1.0 design documents · "NVIDIA Infra Controller (NICo) reference details" · "19 – AI Storage and KV Cache Offloading" · Nutanix Unified Storage and Objects performance material · GPU Farm, TaaS Phase 3, and Astra–IT RTX6000 pages. Tech Preview and roadmap items are labeled as such; confirm current status before using them outside the team.</p>
     <p>The longer reference draft this post was condensed from is <a href="assets/draft2.html"><code>assets/draft2.html</code></a>.</p>
   </section>
 </main>
