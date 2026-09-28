@@ -10,44 +10,44 @@ Each post lives in version control alongside its images, diagrams, and code samp
 .
 ├── posts/
 │   └── YYYY-MM-DD-short-slug/
-│       ├── index.md        # The post itself
-│       ├── assets/         # Images, diagrams, screenshots
+│       ├── index.html      # The post itself: a single self-contained HTML page
+│       ├── assets/         # Images, diagrams, screenshots, earlier drafts
 │       └── code/           # Optional runnable snippets referenced in the post
-├── templates/
-│   └── post.md             # Starting template for new posts
 └── README.md
 ```
 
 - **One folder per post.** Name it `YYYY-MM-DD-short-slug`, using the target publish date (or the date you started, while it's still a draft).
-- **Keep assets next to the post.** Reference them with relative paths, such as `![Architecture](assets/architecture.png)`.
+- **Keep each post self-contained.** Put the CSS in a `<style>` block inside `index.html` and avoid external fonts, scripts, or CDNs, so the page renders the same anywhere, including offline.
+- **Keep assets next to the post.** Reference them with relative paths, such as `<img src="assets/architecture.png" alt="Architecture">` or `<a href="code/example.py">`.
 
 ## Writing a New Post
 
 1. Create a branch: `git checkout -b post/short-slug`
-2. Create the post folder from the template:
+2. Create the post folder, starting from the most recent post's page:
    ```bash
    mkdir -p posts/YYYY-MM-DD-short-slug/assets
-   cp templates/post.md posts/YYYY-MM-DD-short-slug/index.md
+   cp posts/2026-09-28-nutanix-AI-inference/index.html posts/YYYY-MM-DD-short-slug/index.html
    ```
-3. Fill in the front matter and write the post in Markdown.
-4. Open a pull request for review.
-5. Once it's approved and published internally, update `status` to `published`, add the `published_url`, and merge.
+3. Update the metadata in `<head>`, replace the body content, and keep the table of contents in sync with the section IDs.
+4. Preview it locally by opening `index.html` in a browser, or serve the repo with `python3 -m http.server` and browse to the post folder.
+5. Push it for review.
+6. Once it's approved and published internally, set `post:status` to `published`, fill in `post:published_url`, and update the Post Index below.
 
-## Front Matter
+## Post Metadata
 
-Every post starts with a YAML front matter block:
+Every post declares its metadata in `<head>`, so it stays machine-readable without a build step:
 
-```yaml
----
-title: "A Clear, Specific Title"
-author: "Your Name"
-date: YYYY-MM-DD
-status: draft          # draft | in-review | published
-tags: [distributed-systems, performance]
-summary: "One or two sentences describing what the reader will learn."
-published_url: ""      # Internal link once published
----
+```html
+<title>A Clear, Specific Title</title>
+<meta name="author" content="Your Name" />
+<meta name="date" content="YYYY-MM-DD" />
+<meta name="description" content="One or two sentences describing what the reader will learn." />
+<meta name="keywords" content="distributed-systems, performance" />
+<meta name="post:status" content="draft" />      <!-- draft | in-review | published -->
+<meta name="post:published_url" content="" />   <!-- internal link once published -->
 ```
+
+Keep the visible byline in the page header (author, date, read time, status) consistent with these values.
 
 ## Writing Guidelines
 
@@ -69,4 +69,4 @@ These posts are for **internal audiences only**. Before committing, make sure yo
 
 | Date | Title | Status |
 | ---- | ----- | ------ |
-| _TBD_ | _First post coming soon_ | draft |
+| 2026-09-28 | [Inference Is an Infrastructure Problem: From GPT-2 on a Laptop to Nutanix Enterprise AI](posts/2026-09-28-nutanix-AI-inference/index.html) | draft |
