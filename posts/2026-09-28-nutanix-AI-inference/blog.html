@@ -142,7 +142,7 @@
   → serving framework  vLLM or SGLang: batches requests, manages GPU memory
   → model runtime      PyTorch and GPU kernels: runs the model's math
   → GPU hardware       memory, bandwidth, and compute</code></pre>
-    <p><strong>The serving-framework layer is where our team will operate the service</strong>, but any layer beneath it can set the speed limit. A congested gateway, a serving framework that has run out of GPU memory, and a GPU without enough memory bandwidth all look the same to the user: a slow answer. On Nutanix, the gateway is the NAI Agent Gateway, the serving layer is KServe running vLLM or NVIDIA NIM containers, and those containers run on NKP with GPUs attached through AHV. <a href="#nutanix">Where Nutanix fits</a> covers each piece.</p>
+    <p><strong>The serving-framework layer is where our team will operate the service</strong>, but any layer in the path can set the speed limit. A congested gateway, a serving framework that has run out of GPU memory, and a GPU without enough memory bandwidth all look the same to the user: a slow answer. On Nutanix, the gateway is the NAI Agent Gateway, the serving layer is KServe running vLLM or NVIDIA NIM containers, and those containers run on NKP with GPUs attached through AHV. <a href="#nutanix">Where Nutanix fits</a> covers each piece.</p>
   </section>
 
   <section id="why">
@@ -364,7 +364,7 @@ node count      = ceil(GPUs ÷ 8 per node)</code></pre>
     <p>The lessons map directly onto the sections above:</p>
     <ul>
       <li><strong>Capacity is cheap; interconnect is not.</strong> A 96 GB card holds a lot of model, but without NVLink, tensor parallelism across cards pushes every all-reduce over PCIe and hurts inter-token latency for 30B–120B-class models.</li>
-      <li><strong>MoE on one GPU is the sweet spot.</strong> The agent platform runs Qwen3.6-35B-A3B on a single RTX PRO 6000: ≈3B active parameters give a high decode ceiling, and a single GPU means no PCIe collective penalty.</li>
+      <li><strong>PCIe-only GPUs favor models that fit on one card, and those aren't frontier models.</strong> The agent platform runs Qwen3.6-35B-A3B on a single RTX PRO 6000 because that is what this hardware serves well: ≈3B active parameters give a high decode ceiling, and one GPU means no PCIe collectives. Fast to serve isn't the same as capable, though. Models this small trail frontier open models such as DeepSeek V3.1 and Kimi K2 on long, multi-step coding work, and those need two full nodes of these cards, with every collective crossing PCIe and the network.</li>
       <li><strong>Benchmark quality isn't agent compatibility.</strong> gpt-oss-120b was acceptable for general coding help but didn't reliably produce the tool calls the agent workflow required. Model selection is a functional test before it's a sizing exercise.</li>
       <li><strong>Design observability early.</strong> Counting tokens was easy. Per-user and per-team attribution, queue depth, TTFT, TPOT, and showback took longer.</li>
     </ul>

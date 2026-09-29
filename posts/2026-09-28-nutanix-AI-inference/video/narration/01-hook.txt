@@ -1,4 +1,10 @@
-Our team is about to operate large language model inference as a service, not just call it.
+Every time you ask an A-I model a question, a trained model computes the answer on GPUs somewhere. That is called inference.
+
+Inference is the second half of a model's life. In training, the model learns: billions of numbers, called weights, get adjusted over days or weeks. In inference, the weights are frozen, and the model answers requests as they arrive, all day long.
+
+Each request passes through layers. An application calls an A-P-I gateway. The gateway routes it to a serving framework, like v-L-L-M. The framework runs the model, and the GPU does the math.
+
+Our team is about to operate that serving layer as a service, not just call it. But any layer in the path can set the speed limit, and to the user, every one of them looks like a slow answer.
 
 That changes the questions we ask. "Which model is best?" becomes: how many GPUs does this model need, how many servers does that span, and what fails first when a thousand coding agents hit it at once?
 

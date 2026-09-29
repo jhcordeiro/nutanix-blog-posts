@@ -84,6 +84,102 @@ class S01Hook(NarratedSlide):
         self.play(LaggedStart(*[FadeIn(r, shift=UP * 0.2) for i, r in enumerate(racks) if i != 4], lag_ratio=0.08))
         arrow = Arrow(racks.get_top(), chat.get_bottom(), buff=0.15, color=INDIGO)
         self.play(GrowArrow(arrow))
+        name = chip("INFERENCE: A REQUEST IN, AN ANSWER OUT", AMBER, 18).next_to(arrow, RIGHT, buff=0.3)
+        self.play(FadeIn(name, shift=LEFT * 0.2))
+        self.wait(0.2)
+
+        self.beat()
+        clear(self)
+        head = header("01 · The basics", "What inference is")
+        self.play(FadeIn(head, shift=DOWN * 0.2))
+        panels = VGroup(panel(6.3, 4.6), panel(6.3, 4.6)).arrange(RIGHT, buff=0.4).move_to(DOWN * 0.8)
+        titles = VGroup(
+            VGroup(mono("TRAINING", 30, INDIGO, BOLD), txt("the model learns", 22, MUTED)).arrange(DOWN, buff=0.12),
+            VGroup(mono("INFERENCE", 30, AMBER, BOLD), txt("the model answers", 22, MUTED)).arrange(DOWN, buff=0.12),
+        )
+        for t, p in zip(titles, panels):
+            t.move_to(p.get_top() + DOWN * 0.65)
+        weights = VGroup(*[
+            Square(0.28, stroke_color=BG, stroke_width=2, fill_color=INDIGO, fill_opacity=0.3) for _ in range(32)
+        ]).arrange_in_grid(rows=4, cols=8, buff=0.08).move_to(panels[0]).shift(UP * 0.05)
+        self.play(FadeIn(panels), LaggedStart(*[FadeIn(t, shift=DOWN * 0.2) for t in titles], lag_ratio=0.4))
+        self.play(FadeIn(weights))
+        rng = np.random.default_rng(7)
+        for _ in range(5):
+            self.play(*[w.animate.set_fill(INDIGO, rng.uniform(0.15, 1.0)) for w in weights], run_time=0.35)
+        notes = []
+        for grid_x, label, body, color in [
+            (panels[0].get_x(), "WEIGHTS CHANGE ON EVERY STEP", "one long job · days to weeks", INDIGO),
+            (panels[1].get_x(), "WEIGHTS STAY FIXED", "always-on service · every request, all day", AMBER),
+        ]:
+            note = VGroup(chip(label, color, 16), txt(body, 20, MUTED)).arrange(DOWN, buff=0.2)
+            note.next_to(weights, DOWN, buff=0.3).set_x(grid_x)
+            notes.append(note)
+        self.play(FadeIn(notes[0], shift=UP * 0.1))
+        frozen = weights.copy().set_x(panels[1].get_x())
+        self.play(TransformFromCopy(weights, frozen), run_time=1.2)
+        self.play(FadeIn(notes[1], shift=UP * 0.1))
+        y = frozen.get_y()
+        for _ in range(3):
+            req = Square(0.2, stroke_width=0, fill_color=AMBER, fill_opacity=1).move_to([panels[1].get_left()[0] + 0.3, y, 0])
+            ans = Square(0.2, stroke_width=0, fill_color=GREEN, fill_opacity=1).move_to([frozen.get_right()[0] + 0.2, y, 0])
+            self.play(req.animate.move_to([frozen.get_left()[0] - 0.2, y, 0]), run_time=0.4)
+            self.remove(req)
+            self.play(Indicate(frozen, color=AMBER, scale_factor=1.03), run_time=0.35)
+            self.add(ans)
+            self.play(ans.animate.move_to([panels[1].get_right()[0] - 0.3, y, 0]), run_time=0.4)
+            self.play(FadeOut(ans), run_time=0.15)
+        self.wait(0.2)
+
+        self.beat()
+        clear(self, head)
+        layers = [
+            ("Application", "chat · IDE agent · RAG", MUTED),
+            ("API\ngateway", "auth · quotas · routing", MUTED),
+            ("Serving\nframework", "vLLM · SGLang", INDIGO),
+            ("Model\nruntime", "PyTorch · GPU kernels", MUTED),
+            ("GPU", "memory · bandwidth", MUTED),
+        ]
+        boxes = VGroup(*[labeled_box(n, 2.3, 1.2, color=c, size=24) for n, _, c in layers]).arrange(RIGHT, buff=0.4).move_to(UP * 0.2)
+        subs = VGroup(*[mono(s, 14, MUTED).next_to(b, DOWN, buff=0.2) for (_, s, _), b in zip(layers, boxes)])
+        links = VGroup(*[
+            Arrow(a.get_right(), b.get_left(), buff=0.05, color=LINE, stroke_width=3, max_tip_length_to_length_ratio=0.35)
+            for a, b in zip(boxes, boxes[1:])
+        ])
+        self.play(LaggedStart(*[
+            AnimationGroup(FadeIn(b, shift=RIGHT * 0.2), FadeIn(s), *([GrowArrow(links[i - 1])] if i else []))
+            for i, (b, s) in enumerate(zip(boxes, subs))
+        ], lag_ratio=0.4, run_time=3))
+        top_y = boxes.get_top()[1] + 0.35
+        dot = Square(0.22, stroke_width=0, fill_color=AMBER, fill_opacity=1).move_to([boxes[0].get_x(), top_y, 0])
+        request = VGroup(dot, mono("request", 16, AMBER).next_to(dot, UP, buff=0.08))
+        self.play(FadeIn(request))
+        self.play(
+            request.animate.shift(RIGHT * (boxes[-1].get_x() - boxes[0].get_x())),
+            LaggedStart(*[Indicate(b, color=AMBER, scale_factor=1.04) for b in boxes], lag_ratio=0.3),
+            run_time=2.2,
+        )
+        self.play(FadeOut(request))
+        answer_label = mono("answer, token by token", 16, GREEN).move_to([0, top_y + 0.3, 0])
+        answers = [
+            Square(0.16, stroke_width=0, fill_color=GREEN, fill_opacity=1).move_to([boxes[-1].get_x(), top_y, 0])
+            for _ in range(6)
+        ]
+        self.play(FadeIn(answer_label), LaggedStart(*[
+            a.animate.move_to([boxes[0].get_x(), top_y, 0]) for a in answers
+        ], lag_ratio=0.2, run_time=2.2))
+        self.play(FadeOut(answer_label), *[FadeOut(a) for a in answers])
+        self.wait(0.2)
+
+        self.beat()
+        ours = chip("OUR TEAM OPERATES THIS LAYER", AMBER, 16).next_to(subs[2], DOWN, buff=0.3)
+        outline = panel(2.3, 1.2, stroke=AMBER, fill_opacity=0, stroke_width=5).move_to(boxes[2])
+        self.play(Create(outline), FadeIn(ours, shift=UP * 0.1))
+        self.play(LaggedStart(*[Indicate(boxes[i], color=RED, scale_factor=1.05) for i in (1, 2, 3, 4)], lag_ratio=0.35))
+        limit = txt("Any layer in the path can set the speed limit.", 32, INK, BOLD).move_to(DOWN * 2.35)
+        seen = mono("to the user, every bottleneck looks like a slow answer", 18, MUTED).next_to(limit, DOWN, buff=0.25)
+        self.play(FadeIn(limit, shift=UP * 0.2))
+        self.play(FadeIn(seen))
 
         self.beat()
         clear(self)
@@ -869,12 +965,55 @@ class S08GpuFarm(NarratedSlide):
 
         self.beat()
         lessons = VGroup(
-            card("Capacity is cheap;\ninterconnect is not", "without NVLink, tensor parallelism\npushes every all-reduce over PCIe", width=4.1, height=3.0, accent=AMBER, title_size=24, body_size=16),
-            card("MoE on one GPU is\nthe sweet spot", "Qwen3.6-35B-A3B on a single\nRTX PRO 6000: ≈3B active parameters", width=4.1, height=3.0, accent=GREEN, title_size=24, body_size=16),
-            card("Benchmarks aren't\nagent compatibility", "gpt-oss-120b missed required\ntool calls: test that first", width=4.1, height=3.0, accent=INDIGO, title_size=24, body_size=16),
-        ).arrange(RIGHT, buff=0.35).move_to(boxes)
-        self.play(FadeOut(boxes), FadeOut(texts), *[FadeOut(c) for c in counters])
-        self.play(LaggedStart(*[FadeIn(l, shift=UP * 0.3) for l in lessons], lag_ratio=0.5, run_time=2.4))
+            card("Capacity is cheap;\ninterconnect is not", "without NVLink, tensor parallelism\npushes every all-reduce over PCIe", width=6.0, height=3.0, accent=AMBER, title_size=28, body_size=18),
+            card("PCIe favors models\nthat fit on one card", "Qwen3.6-35B-A3B on one RTX PRO 6000:\nfast to serve, not frontier-class", width=6.0, height=3.0, accent=INDIGO, title_size=28, body_size=18),
+        ).arrange(RIGHT, buff=0.4).move_to(boxes)
+        self.play(FadeOut(boxes), FadeOut(texts), FadeOut(confirm), *[FadeOut(c) for c in counters])
+        self.play(LaggedStart(*[FadeIn(l, shift=UP * 0.3) for l in lessons], lag_ratio=0.5, run_time=2.0))
+
+        self.beat()
+        clear(self, head)
+        title = mono("FP8 WEIGHTS VS. WHAT ONE RTX PRO 6000 HOLDS", 18, MUTED, BOLD).move_to([-6.5, 1.55, 0], aligned_edge=LEFT)
+        scale, x0 = 7.4 / 1029, -2.4
+        rows = VGroup()
+        for i, (name, sub, gb, value, color) in enumerate([
+            ("Qwen3.6-35B-A3B", "the farm's single-GPU agent model", 35, "≈35 GB", GREEN),
+            ("DeepSeek V3.1", "frontier open model", 685, "≈685 GB", AMBER),
+            ("Kimi K2", "frontier open model", 1029, "≈1 TB", AMBER),
+        ]):
+            y = 0.6 - i * 1.1
+            names = VGroup(txt(name, 24, INK, BOLD), txt(sub, 16, MUTED)).arrange(DOWN, aligned_edge=LEFT, buff=0.08)
+            names.move_to([-6.5, y, 0], aligned_edge=LEFT)
+            bar = Rectangle(width=gb * scale, height=0.55, stroke_width=0, fill_color=color, fill_opacity=0.9)
+            bar.move_to([x0, y, 0], aligned_edge=LEFT)
+            label = mono(value, 20, color, BOLD).next_to(bar, RIGHT, buff=0.2)
+            label.set_x(max(label.get_x(), x0 + 86 * scale + 0.2 + label.width / 2))
+            rows.add(VGroup(names, bar, label))
+        gpu_x = x0 + 86 * scale
+        gpu_line = DashedLine([gpu_x, 1.1, 0], [gpu_x, -1.95, 0], color=INK, stroke_width=3)
+        gpu_label = mono("one GPU · ≈86 GB usable", 16, INK).next_to(gpu_line, DOWN, buff=0.12).align_to(gpu_line, LEFT).shift(LEFT * 0.2)
+        self.play(FadeIn(title), Create(gpu_line), FadeIn(gpu_label))
+        for names, bar, value in rows:
+            self.play(FadeIn(names), GrowFromEdge(bar, LEFT), run_time=0.9)
+            self.play(FadeIn(value), run_time=0.3)
+        gap = txt("Frontier open models need 8–12× what one GPU holds.", 30, INK, BOLD).move_to(DOWN * 3.05)
+        self.play(FadeIn(gap, shift=UP * 0.2))
+
+        self.beat()
+        clear(self, head)
+        bar = MemoryBar(96, width=10.0, height=1.0).move_to(UP * 0.4)
+        bar_title = mono("ONE RTX PRO 6000 · 96 GB", 18, MUTED, BOLD).next_to(bar, UP, buff=0.55).align_to(bar, LEFT)
+        usable = DashedLine(bar.x_at(86) + UP * 0.6, bar.x_at(86) + DOWN * 0.6, color=INK, stroke_width=3).set_y(bar.get_y())
+        usable_label = mono("90% usable", 16, INK).next_to(usable, UP, buff=0.1)
+        session = bar.block(0, 64, AMBER)
+        session_label = txt("one 128K-token agent session ≈64 GB", 24, INK, BOLD).move_to(session)
+        basis = mono("KV cache at Llama 3.1 405B's ≈500 KB per token, before any weights", 16, MUTED)
+        basis.next_to(bar, DOWN, buff=0.3).align_to(bar, LEFT)
+        self.play(FadeIn(bar_title), Create(bar), Create(usable), FadeIn(usable_label))
+        self.play(GrowFromEdge(session, LEFT), FadeIn(session_label), run_time=1.4)
+        self.play(FadeIn(basis))
+        quote = pull_quote("Usable LLMs for agentic work\nneed a GPU farm.", 38).move_to(DOWN * 2.3)
+        self.play(FadeIn(quote, shift=UP * 0.2))
 
 
 class S09Takeaways(NarratedSlide):

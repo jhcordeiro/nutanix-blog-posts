@@ -1,8 +1,8 @@
 # Video script: Inference is an infrastructure problem
 
-Companion explainer for [Inference is an infrastructure problem](../index.html) (Inference engineering at Nutanix, Part 1).
+Companion explainer for [Inference is an infrastructure problem](../blog.html) (Inference engineering at Nutanix, Part 1).
 
-- **Runtime:** about 6 minutes 50 seconds (about 1,020 spoken words at 150 words per minute)
+- **Runtime:** about 7 minutes 40 seconds (about 1,150 spoken words at 150 words per minute)
 - **Audience:** internal only, matching the post footer
 - **Narration source:** the files in [`narration/`](narration/). They are plain spoken prose, meant to be fed to the text-to-speech (TTS) model one scene at a time, in file-name order. The **Narration** block in each scene below repeats its file word for word, so editors can read the script without switching files. If you change the wording, change it in both places.
 
@@ -23,6 +23,8 @@ The narration files already spell these out phonetically, so the TTS model needs
 
 | Written | Spoken in narration |
 | --- | --- |
+| AI / API | "A-I" / "A-P-I" |
+| vLLM | "v-L-L-M" |
 | GPT-2 | "G-P-T two" |
 | gpt-oss-120b | "G-P-T O-S-S one-twenty-B" |
 | Llama 3.1 405B | "Llama three point one, four hundred five billion", then "Llama four-oh-five B" |
@@ -53,14 +55,14 @@ The visuals are Manim animations in [`animations/`](animations/). [`scenes.py`](
 
 | Scene | Class | Steps |
 | --- | --- | --- |
-| 1. Hook | `S01Hook` | 3 |
+| 1. Hook and what inference is | `S01Hook` | 6 |
 | 2. GPT-2 on a laptop | `S02Gpt2` | 6 |
 | 3. Two phases | `S03Phases` | 6 |
 | 4. The two numbers that describe a GPU | `S04GpuNumbers` | 6 |
 | 5. Do the math | `S05Math` | 6 |
 | 6. KV cache | `S06KvCache` | 4 |
 | 7. Where Nutanix fits | `S07Nutanix` | 4 |
-| 8. GPU Farm | `S08GpuFarm` | 3 |
+| 8. GPU Farm | `S08GpuFarm` | 5 |
 | 9. Takeaways | `S09Takeaways` | 3 |
 
 **Recording:** open `animations/deck/index.html` in a browser and press `F` for full screen. Play each narration file, then press the right arrow when the next paragraph starts. Press `S` to open the speaker view, which shows the current paragraph as notes.
@@ -75,7 +77,7 @@ uv run manim-slides convert --one-file --offline S01Hook S02Gpt2 S03Phases S04Gp
 ```
 
 - Use `--quality h`, not `-qh`: manim-slides reads `-qh` as its own `-h` (help) flag. For fast drafts, use `--quality l`.
-- `--one-file --offline` embeds the clips and reveal.js in a single ~24 MB HTML file. On networks that inspect TLS, the reveal.js download fails with a certificate error. Export the macOS trust store first:
+- `--one-file --offline` embeds the clips and reveal.js in a single ~30 MB HTML file. On networks that inspect TLS, the reveal.js download fails with a certificate error. Export the macOS trust store first:
 
   ```bash
   security find-certificate -a -p /Library/Keychains/System.keychain \
@@ -87,16 +89,22 @@ uv run manim-slides convert --one-file --offline S01Hook S02Gpt2 S03Phases S04Gp
 
 ---
 
-## Scene 1: Hook
+## Scene 1: Hook and what inference is
 
-- **Time:** 0:00 to 0:30
-- **Source:** [Why this matters](../index.html#why)
+- **Time:** 0:00 to 1:15
+- **Source:** [What inference is](../blog.html#what) and [Why this matters](../blog.html#why)
 - **Narration file:** [`narration/01-hook.txt`](narration/01-hook.txt)
 
-**Visual:** Open on a single chat window with a streaming answer. Pull back to reveal the answer is coming from a rack of GPU servers, then a whole row of racks. End on the title card.
+**Visual:** Open on a single chat window with a streaming answer. Pull back to reveal the answer is coming from a rack of GPU servers, then a whole row of racks, and label it "inference". Then two panels: in "Training", a grid of weights keeps changing; the finished grid copies into "Inference", where it stays fixed while requests flow in and answers flow out. Then the request path as five boxes, with a request travelling right and answer tokens streaming back left. Highlight the serving framework as our layer and flash the others. Finish with the questions and the title card.
 
 **On screen:**
 
+- "Inference: a request in, an answer out"
+- Training: the model learns · weights change on every step · one long job, days to weeks
+- Inference: the model answers · weights stay fixed · always-on service, every request, all day
+- Request path: Application (chat, IDE agent, RAG) → API gateway (auth, quotas, routing) → Serving framework (vLLM, SGLang) → Model runtime (PyTorch, GPU kernels) → GPU (memory, bandwidth)
+- "Our team operates this layer" (on the serving framework)
+- *Any layer in the path can set the speed limit.* To the user, every bottleneck looks like a slow answer.
 - "Which model is best?" → struck through → "How many GPUs? How many nodes? What fails first?"
 - Title card: **Inference is an infrastructure problem**
 - Closing line: *Choosing a model is choosing the physical shape of the service.*
@@ -104,7 +112,13 @@ uv run manim-slides convert --one-file --offline S01Hook S02Gpt2 S03Phases S04Gp
 **Narration:**
 
 ```text
-Our team is about to operate large language model inference as a service, not just call it.
+Every time you ask an A-I model a question, a trained model computes the answer on GPUs somewhere. That is called inference.
+
+Inference is the second half of a model's life. In training, the model learns: billions of numbers, called weights, get adjusted over days or weeks. In inference, the weights are frozen, and the model answers requests as they arrive, all day long.
+
+Each request passes through layers. An application calls an A-P-I gateway. The gateway routes it to a serving framework, like v-L-L-M. The framework runs the model, and the GPU does the math.
+
+Our team is about to operate that serving layer as a service, not just call it. But any layer in the path can set the speed limit, and to the user, every one of them looks like a slow answer.
 
 That changes the questions we ask. "Which model is best?" becomes: how many GPUs does this model need, how many servers does that span, and what fails first when a thousand coding agents hit it at once?
 
@@ -115,8 +129,8 @@ Here is the idea behind this video. Choosing a model is choosing the physical sh
 
 ## Scene 2: Start small with GPT-2 on a laptop
 
-- **Time:** 0:30 to 1:30
-- **Source:** [Start small: GPT-2 on a laptop](../index.html#gpt2)
+- **Time:** 1:15 to 2:15
+- **Source:** [Start small: GPT-2 on a laptop](../blog.html#gpt2)
 - **Narration file:** [`narration/02-gpt2-laptop.txt`](narration/02-gpt2-laptop.txt)
 
 **Visual:** Screen recording of `python code/gpt2-inference.py`. Type a prompt, let the 30-token continuation stream, and hold on the timing line. Then show a two-column mapping (laptop step to production step) that builds one row at a time. Finish with three arrows labeled with the multipliers, growing outward from a small "72 KB/token" box.
@@ -155,8 +169,8 @@ So the per-token cost is not what explodes. Three things around it do. Context g
 
 ## Scene 3: Two phases, two bottlenecks
 
-- **Time:** 1:30 to 2:20
-- **Source:** [Two phases, two bottlenecks](../index.html#phases)
+- **Time:** 2:15 to 3:05
+- **Source:** [Two phases, two bottlenecks](../blog.html#phases)
 - **Narration file:** [`narration/03-two-phases.txt`](narration/03-two-phases.txt)
 
 **Visual:** Split screen. Left: "Prefill", a whole prompt lighting up at once. Right: "Decode", tokens appearing one by one. Then a horizontal timeline bar for one request where the decode segment dwarfs everything else. Finish with a latency histogram, highlighting the long p99 tail.
@@ -200,8 +214,8 @@ The average tells you the machine is healthy. The tail tells you whether users a
 
 ## Scene 4: The two numbers that describe a GPU
 
-- **Time:** 2:20 to 3:15
-- **Source:** [The two numbers that describe a GPU](../index.html#gpus)
+- **Time:** 3:05 to 3:55
+- **Source:** [The two numbers that describe a GPU](../blog.html#gpus)
 - **Narration file:** [`narration/04-gpu-numbers.txt`](narration/04-gpu-numbers.txt)
 
 **Visual:** A GPU card drawn as a bucket (capacity) with a pipe (bandwidth). Show the ceiling formula, then two scenario cards. For the MoE card, animate a router sending a token to two of many expert blocks while the rest stay lit but idle, to show they still occupy memory.
@@ -234,8 +248,8 @@ But every expert still has to sit in memory. The pressure moves from bandwidth t
 
 ## Scene 5: Do the math
 
-- **Time:** 3:15 to 4:10
-- **Source:** [Do the math: what today's open models require](../index.html#math)
+- **Time:** 3:55 to 4:50
+- **Source:** [Do the math: what today's open models require](../blog.html#math)
 - **Narration file:** [`narration/05-do-the-math.txt`](narration/05-do-the-math.txt)
 
 **Visual:** Show the four formulas as a stack. Then build the model table one row at a time, with each row filling in 8-GPU server outlines. Kimi K2 fills two servers. Then swap the H100 servers for B300 and watch Kimi K2 collapse into half of one server. End on the pull quote.
@@ -283,8 +297,8 @@ Choosing a GPU type really means choosing how many failure domains a replica spa
 
 ## Scene 6: KV cache, the concurrency multiplier
 
-- **Time:** 4:10 to 4:50
-- **Source:** [KV cache: the concurrency multiplier](../index.html#kv)
+- **Time:** 4:50 to 5:30
+- **Source:** [KV cache: the concurrency multiplier](../blog.html#kv)
 - **Narration file:** [`narration/06-kv-cache.txt`](narration/06-kv-cache.txt)
 
 **Visual:** A memory bar for one 8×H100 replica. The weights block fills most of it; two 64 GB session blocks squeeze into the rest, and a third bounces off. Then swap to an MLA model, where the session blocks shrink to slivers. End with two small cards for the Tech Preview features.
@@ -313,8 +327,8 @@ N-A-I two point eight adds cache-aware routing and cache offload to host memory,
 
 ## Scene 7: Where Nutanix fits
 
-- **Time:** 4:50 to 5:45
-- **Source:** [Where Nutanix fits](../index.html#nutanix)
+- **Time:** 5:30 to 6:20
+- **Source:** [Where Nutanix fits](../blog.html#nutanix)
 - **Narration file:** [`narration/07-where-nutanix-fits.txt`](narration/07-where-nutanix-fits.txt)
 
 **Visual:** An animated stack that builds from the bottom up, one layer per sentence of narration, under a "Project Astra" banner. Then a left-to-right pipeline for the cold path: Objects bucket → Files volume → GPU memory, with a stopwatch.
@@ -352,11 +366,11 @@ Measure the load. Don't derive it from a spec sheet.
 
 ## Scene 8: Field notes from our GPU Farm
 
-- **Time:** 5:45 to 6:15
-- **Source:** [Field notes: our own GPU Farm](../index.html#gpu-farm)
+- **Time:** 6:20 to 7:05
+- **Source:** [Field notes: our own GPU Farm](../blog.html#gpu-farm)
 - **Narration file:** [`narration/08-gpu-farm.txt`](narration/08-gpu-farm.txt)
 
-**Visual:** Three stat cards animate in, then three lesson cards replace them one at a time.
+**Visual:** A request pipeline from developer to GPU Farm, then three stat cards, then two lesson cards. Then horizontal bars comparing FP8 weight sizes against a dashed line for what one RTX PRO 6000 holds. Finish with one GPU's memory bar, most of it filled by a single agent session's KV cache.
 
 **On screen:**
 
@@ -365,25 +379,32 @@ Measure the load. Don't derive it from a spec sheet.
 - **619 onboarded users**: up 62%, planning for ≈1,500 and then ≈3,000
 - Lessons:
   - Capacity is cheap; interconnect is not
-  - MoE on one GPU is the sweet spot (Qwen3.6-35B-A3B on a single RTX PRO 6000)
-  - Benchmark quality isn't agent compatibility
+  - PCIe favors models that fit on one card (Qwen3.6-35B-A3B on one RTX PRO 6000: fast to serve, not frontier-class)
+- FP8 weights vs. one GPU (≈86 GB usable): Qwen3.6-35B-A3B ≈35 GB · DeepSeek V3.1 ≈685 GB · Kimi K2 ≈1 TB
+- "Frontier open models need 8–12× what one GPU holds."
+- One RTX PRO 6000: a 128K-token agent session ≈64 GB (KV cache at Llama 3.1 405B's ≈500 KB per token, before any weights)
+- Pull quote: *Usable LLMs for agentic work need a GPU farm.*
 
 **Narration:**
 
 ```text
 Our internal GPU Farm already runs this stack, serving tokens to Nutanix engineers, mostly for coding agents.
 
-It runs ninety-six R-T-X Pro six thousand GPUs, generates about forty-two billion tokens a week, and serves six hundred nineteen onboarded users.
+It runs 96 RTX Pro 6000 GPUs, generates about 40 billion tokens a week, and serves over 600 onboarded users.
 
-The lessons match the math. Without N-V Link, splitting a model across cards hurts latency. A Mixture-of-Experts model on a single GPU is the sweet spot. And benchmark scores don't guarantee that a model can make the tool calls an agent needs, so test that first.
+The lessons match the math. Without N-V Link, splitting a model across cards hurts latency, so this hardware favors models that fit on one card. A small Mixture-of-Experts model on one GPU is fast and cheap to serve.
+
+But fast to serve isn't the same as capable. Models small enough to fit on one GPU are far from the frontier of open-source models.
+
+Add the memory needed for agent context at 64GB per 128k tokens and GPU farms are the only way to host usable LLMs for agentic work.
 ```
 
 ---
 
 ## Scene 9: Takeaways and close
 
-- **Time:** 6:15 to 6:50
-- **Source:** [Takeaways](../index.html#takeaways) and [Coming next in this series](../index.html#next)
+- **Time:** 7:05 to 7:40
+- **Source:** [Takeaways](../blog.html#takeaways) and [Coming next in this series](../blog.html#next)
 - **Narration file:** [`narration/09-takeaways.txt`](narration/09-takeaways.txt)
 
 **Visual:** Takeaways appear as a checklist, one per sentence. Then a "Part 2" teaser card and an end card with the post title.
