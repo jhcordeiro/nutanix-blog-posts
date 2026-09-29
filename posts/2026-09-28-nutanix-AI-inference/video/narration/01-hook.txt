@@ -1,0 +1,5 @@
+Our team is about to operate large language model inference as a service, not just call it.
+
+That changes the questions we ask. "Which model is best?" becomes: how many GPUs does this model need, how many servers does that span, and what fails first when a thousand coding agents hit it at once?
+
+Here is the idea behind this video. Choosing a model is choosing the physical shape of the service.

@@ -1,0 +1,12 @@
+[project]
+name = "inference-video-animations"
+version = "0.1.0"
+description = "Manim scenes for the 'Inference is an infrastructure problem' video explainer"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "manim>=0.19",
+    "manim-slides>=5.1",
+]
+
+[tool.uv]
+package = false

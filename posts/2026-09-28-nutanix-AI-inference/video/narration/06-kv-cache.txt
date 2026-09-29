@@ -1,0 +1,7 @@
+Weights decide whether one replica fits. K-V cache decides how many requests it can serve at once.
+
+Llama 405B stores about 500 kilobytes of cache per token. One full session of 128K tokens required about 64GB of memory. After the weights, eight H one hundreds have room for just two of those sessions. The model fits. The workload doesn't.
+
+Models with multi-head latent attention, like DeepSeek and Kimi, compress that cache to about "70" kilobytes per token. Attention design is an infrastructure input.
+
+N-A-I 2.8 adds cache-aware routing and cache offload to host memory, both in Tech Preview.

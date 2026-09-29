@@ -1,0 +1,11 @@
+Let's start small. G-P-T two, with one hundred twenty-four million parameters, running on a laptop.
+
+The companion script is about one hundred forty lines of Python. It tokenizes your prompt, runs the transformer, streams the answer, and reports two numbers: time to first token, and decode speed.
+
+Every step in that script comes back later as an infrastructure decision.
+
+The script also skips the most important production trick, the K-V cache. Real engines store each layer's attention keys and values, so each step only processes the newest token.
+
+For G-P-T two, that cache costs about seventy-two kilobytes per token. Kimi K two, a trillion-parameter model, stores about the same.
+
+So the per-token cost is not what explodes. Three things around it do. Context grows from one thousand tokens to one hundred twenty-eight thousand. One user becomes thousands. And the weights no longer fit on one device.

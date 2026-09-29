@@ -1,0 +1,11 @@
+Model selection is capacity planning, and four formulas get you most of the way.
+
+Weight memory is parameters times bytes per parameter. In FP8, that's one byte each. Add K-V cache for the live tokens, divide by the usable memory on each GPU, and round up.
+
+On H100, with one long session of cache each, GPT OSS 120B needs two GPUs, and Llama 405B needs eight, one full server. Kimi K two, at a trillion parameters, needs sixteen. That's two full servers.
+
+That jump from one server to two changes the problem. Traffic between GPUs leaves the fast N-V Link domain, the replica draws rack-level power, and any failure moves nearly a terabyte.
+
+On B three hundreds, Kimi K two fits in four GPUs, inside one server.
+
+Choosing a GPU type really means choosing how many failure domains a replica spans.

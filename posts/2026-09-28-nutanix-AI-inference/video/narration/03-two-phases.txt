@@ -1,0 +1,11 @@
+Every request has two phases, and they stress different hardware.
+
+Prefill processes the whole INITIAL prompt in parallel. It is usually compute-bound, and it sets the time to first token.
+
+Decode produces one token at a time. Every step REREADS the model's weights, so it is usually limited by MEMORY bandwidth. It sets how fast the answer streams.
+
+In a typical request, the first token shows up in about half a second, but the full answer takes about ten seconds. In other words, Decode is about ninety-seven percent of the model's time.
+
+So we write two budgets, one for the first token and one for completion, and we track the ninety-ninth percentile, not just the average.
+
+The average tells you the machine is healthy. The tail tells you whether users agree.

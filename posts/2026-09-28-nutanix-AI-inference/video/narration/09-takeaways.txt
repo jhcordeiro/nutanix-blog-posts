@@ -1,0 +1,7 @@
+To recap. Prefill sets the first token, and decode sets completion. Measure both, at the tail. 
+Check capacity and bandwidth for every model and GPU pair. 
+K-V cache, NOT weights, usually limits concurrency. And the GPU you choose decides how many failure domains each replica spans.
+
+In part two, we'll look at parallelism and the network fabric, and why the interconnect becomes part of the accelerator.
+
+The full post, with all the math, is linked with this video. Thanks for watching.

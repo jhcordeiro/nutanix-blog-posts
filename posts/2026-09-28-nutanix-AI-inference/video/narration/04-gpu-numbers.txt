@@ -1,0 +1,11 @@
+For inference, a GPU comes down to two numbers: how many bytes its memory holds, and how fast it can read them.
+
+Capacity decides whether the model fits. Bandwidth decides how fast decode runs once it does.
+
+For a single stream, tokens per second can't beat memory bandwidth divided by the bytes of weights read for each token.
+
+Llama 3.1, 405B parameters, in FP8 on 8x Nvidia H100s, max-out around 66 tokens per second.
+
+Mixture-of-Experts models send each token to only a few experts, so far fewer bytes are read. GPT OSS 120B, on one RTX Pro 6000, has a ceiling around 530 tokens per second.
+
+But every expert still has to sit in memory. The pressure moves from bandwidth to capacity.

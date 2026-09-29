@@ -1,0 +1,7 @@
+So where does Nutanix fit? The model server is one layer, and Nutanix supplies the layers around it.
+
+Project Astra packages them into an A-I factory. Foundation Central and NVIDIA Infra Controller discover and image the GPU servers. Nutanix Infra Manager claims them and builds clusters. A-H-V attaches the GPUs to virtual machines on compute-only GPU clusters. Prism Central handles tenancy. N-K-P runs Kubernetes. And N-A-I turns it all into managed model endpoints.
+
+Then there's the cold start. Weights flow from Nutanix Objects into a shared Files volume, and every new replica reads them from there. A 405B model weights at a hight storage read of 10GB/s takes at least 40 seconds, before ANY setup. Real loads can be far slower.
+
+Measure the load. Don't derive it from a spec sheet.

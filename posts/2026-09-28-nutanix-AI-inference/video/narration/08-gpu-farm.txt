@@ -1,0 +1,9 @@
+Our internal GPU Farm already runs this stack, serving tokens to Nutanix engineers, mostly for coding agents.
+
+It runs 96 RTX Pro 6000 GPUs, generates about 40 billion tokens a week, and serves over 600 onboarded users.
+
+The lessons match the math. Without N-V Link, splitting a model across cards hurts latency. A Mixture-of-Experts model on a single GPU is the sweet spot. 
+
+However, models small enough to fit on a single GPU are far from meeting fronteir performance for Open source models. 
+
+Add the memory needed for agent context at 64GB per 128k tokens and GPU farms are the only way to host usable LLMs for agentic work.
