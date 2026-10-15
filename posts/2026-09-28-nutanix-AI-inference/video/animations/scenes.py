@@ -5,6 +5,7 @@ narration paragraph as speaker notes (press S in the HTML deck to see them).
 """
 
 from manim import *
+from manim_slides import Slide
 
 from theme import (
     AMBER,
@@ -52,6 +53,23 @@ def clear(scene, *keep, run_time=0.6):
     gone = [m for m in scene.mobjects if m not in keep]
     if gone:
         scene.play(*[FadeOut(m) for m in gone], run_time=run_time)
+
+
+class S00Title(Slide):
+    """Opening card shown before the narration starts; it has no narration file."""
+
+    def construct(self):
+        self.next_slide(notes="Title slide. No narration: hold here, then advance as narration 01 starts.")
+        kicker = mono("INFERENCE ENGINEERING AT NUTANIX · PART 1", 22, INDIGO, BOLD)
+        title = txt("Inference is an\ninfrastructure problem", 80, INK, BOLD, line_spacing=0.85)
+        subtitle = txt("From GPT-2 on a laptop to Nutanix Enterprise AI", 30, MUTED)
+        block = VGroup(kicker, title, subtitle).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        rule = Line(LEFT, RIGHT, color=LINE, stroke_width=2).set_width(block.width)
+        author = txt("Jhon Cordeiro", 34, INK, BOLD)
+        VGroup(block, rule, author).arrange(DOWN, aligned_edge=LEFT, buff=0.55).move_to(ORIGIN)
+        self.play(FadeIn(kicker, shift=UP * 0.2), Write(title), run_time=2)
+        self.play(FadeIn(subtitle, shift=UP * 0.15))
+        self.play(Create(rule), FadeIn(author, shift=UP * 0.15))
 
 
 class S01Hook(NarratedSlide):

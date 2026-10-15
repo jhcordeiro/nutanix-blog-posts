@@ -51,10 +51,11 @@ The narration files already spell these out phonetically, so the TTS model needs
 
 ## Animated deck
 
-The visuals are Manim animations in [`animations/`](animations/). [`scenes.py`](animations/scenes.py) has one class per scene, and [`theme.py`](animations/theme.py) holds the shared colors and layout pieces. Each step pauses on its last frame until you press the right arrow, space, or click. Every step corresponds to one paragraph of the scene's narration file. The render fails if a scene's step count and its paragraph count ever drift apart.
+The visuals are Manim animations in [`animations/`](animations/). [`scenes.py`](animations/scenes.py) has one class per scene, and [`theme.py`](animations/theme.py) holds the shared colors and layout pieces. Each step pauses on its last frame until you press the right arrow, space, or click. Every step after the title card corresponds to one paragraph of the scene's narration file. The render fails if a scene's step count and its paragraph count ever drift apart.
 
 | Scene | Class | Steps |
 | --- | --- | --- |
+| Title card (talk title and author, no narration) | `S00Title` | 1 |
 | 1. Hook and what inference is | `S01Hook` | 6 |
 | 2. GPT-2 on a laptop | `S02Gpt2` | 6 |
 | 3. Two phases | `S03Phases` | 6 |
@@ -65,15 +66,15 @@ The visuals are Manim animations in [`animations/`](animations/). [`scenes.py`](
 | 8. GPU Farm | `S08GpuFarm` | 5 |
 | 9. Takeaways | `S09Takeaways` | 3 |
 
-**Recording:** open `animations/deck/index.html` in a browser and press `F` for full screen. Play each narration file, then press the right arrow when the next paragraph starts. Press `S` to open the speaker view, which shows the current paragraph as notes.
+**Recording:** open `animations/deck/index.html` in a browser and press `F` for full screen. The deck opens on the title card; start narration 01 as you advance past it. After that, play each narration file and press the right arrow when the next paragraph starts. Press `S` to open the speaker view, which shows the current paragraph as notes.
 
 **Building the deck** (from `animations/`, about 3 minutes at 1080p60):
 
 ```bash
 brew install cairo pkg-config   # one-time: pycairo has no macOS wheels
 UV_NATIVE_TLS=1 uv sync
-uv run manim-slides render --quality h scenes.py S01Hook S02Gpt2 S03Phases S04GpuNumbers S05Math S06KvCache S07Nutanix S08GpuFarm S09Takeaways
-uv run manim-slides convert --one-file --offline S01Hook S02Gpt2 S03Phases S04GpuNumbers S05Math S06KvCache S07Nutanix S08GpuFarm S09Takeaways deck/index.html
+uv run manim-slides render --quality h scenes.py S00Title S01Hook S02Gpt2 S03Phases S04GpuNumbers S05Math S06KvCache S07Nutanix S08GpuFarm S09Takeaways
+uv run manim-slides convert --one-file --offline S00Title S01Hook S02Gpt2 S03Phases S04GpuNumbers S05Math S06KvCache S07Nutanix S08GpuFarm S09Takeaways deck/index.html
 ```
 
 - Use `--quality h`, not `-qh`: manim-slides reads `-qh` as its own `-h` (help) flag. For fast drafts, use `--quality l`.
